@@ -13,7 +13,7 @@ document
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-        },
+        }, //hilfe 
         body: JSON.stringify({ first_name: firstName, email, password }),
       });
       const result = await response.json();
