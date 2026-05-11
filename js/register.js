@@ -4,6 +4,7 @@ document
   .addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const firstName = document.getElementById("first_name").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
 
@@ -13,7 +14,7 @@ document
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ first_name: firstName, email, password }),
       });
       const result = await response.json();
 

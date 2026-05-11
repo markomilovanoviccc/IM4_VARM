@@ -9,11 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $data = json_decode(file_get_contents("php://input"), true);
 
-    $email    = trim($data['email'] ?? '');
-    $password = trim($data['password'] ?? '');
+    $firstName = trim($data['first_name'] ?? '');
+    $email     = trim($data['email'] ?? '');
+    $password  = trim($data['password'] ?? '');
 
-    if (!$email || !$password) {
-        echo json_encode(["status" => "error", "message" => "Email and password are required"]);
+    if (!$firstName || !$email || !$password) {
+        echo json_encode(["status" => "error", "message" => "First name, email and password are required"]);
         exit;
     }
 
@@ -28,11 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Hash the password
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    // Insert the new user
-    $insert = $pdo->prepare("INSERT INTO users (email, password) VALUES (:email, :pass)");
+    // Insert the new user (store first name)
+    $insert = $pdo->prepare("INSERT INTO users (first_name, email, password) VALUES (:first_name, :email, :pass)");
     $insert->execute([
-        ':email' => $email,
-        ':pass'  => $hashedPassword
+        ':first_name' => $firstName,
+        ':email'      => $email,
+        ':pass'       => $hashedPassword
     ]);
 
     echo json_encode(["status" => "success"]);

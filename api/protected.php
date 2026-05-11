@@ -14,5 +14,6 @@ if (!isset($_SESSION['user_id'])) {
 echo json_encode([
     "status" => "success",
     "user_id" => $_SESSION['user_id'],
-    "email" => $_SESSION['email']
+    "email" => $_SESSION['email'],
+    "first_name" => $_SESSION['first_name'] ?? null
 ]);

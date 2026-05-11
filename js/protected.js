@@ -12,6 +12,7 @@ async function checkAuth() {
     const result = await response.json();
 
     // Display user data in the protected content div
+    document.getElementById("userFirstName").textContent = result.first_name || '';
     document.getElementById("userEmail").textContent = result.email;
     document.getElementById("userId").textContent = result.user_id;
 
