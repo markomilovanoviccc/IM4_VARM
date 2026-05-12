@@ -72,8 +72,8 @@ try {
 
     // Gesamtbetrag berechnen
     $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM(muenz_wert), 0) AS gesamt
-        FROM einwurf_historie
+        SELECT COALESCE(SUM(muenz_wert * anzahl), 0) AS gesamt
+        FROM muenzbestand
         WHERE sparschwein_id = :sid
     ");
 
