@@ -1,0 +1,557 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_NeoPixel.h>
+#include <ESP32Servo.h>
+
+// =====================================================
+// WLAN
+// =====================================================
+const char* ssid = "tinkergarden";
+const char* password = "strenggeheim";
+
+// =====================================================
+// API
+// =====================================================
+String geraeteId = "SPAR001";
+
+String einwurfUrl = "https://IM4-VARM.villelindskog.ch/api/einwurf.php";
+String sparzielUrl = "https://IM4-VARM.villelindskog.ch/api/sparziel.php?geraete_id=SPAR001";
+
+// =====================================================
+// LICHTSENSOREN FUER MUENZEN
+// =====================================================
+// HIER PINS ANPASSEN, FALLS DU ANDERE PINS VERWENDEST
+
+#define SENSOR_1_PIN 2   // Sensor fuer 1 Franken
+#define SENSOR_2_PIN 8   // Sensor fuer 2 Franken
+#define SENSOR_5_PIN 9   // Sensor fuer 5 Franken
+
+bool letzterZustand1 = HIGH;
+bool letzterZustand2 = HIGH;
+bool letzterZustand5 = HIGH;
+
+unsigned long letzteErkennung1 = 0;
+unsigned long letzteErkennung2 = 0;
+unsigned long letzteErkennung5 = 0;
+
+const unsigned long debounceZeit = 800;
+
+// =====================================================
+// OLED DISPLAY
+// =====================================================
+#define SDA_PIN 6
+#define SCL_PIN 7
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// =====================================================
+// LED RING
+// =====================================================
+#define LED_PIN 4
+#define NUM_LEDS 12
+
+Adafruit_NeoPixel ring(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// =====================================================
+// SERVO
+// =====================================================
+#define SERVO_PIN 3
+
+Servo servo;
+
+// =====================================================
+// SERVO-POSITIONEN
+// =====================================================
+// HIER KANNST DU DEN SERVO EINSTELLEN
+
+const int SERVO_ZU = 0;        // Position: Sparschwein geschlossen
+const int SERVO_OFFEN = 90;    // Position: Sparschwein offen
+
+// Wenn der Servo falsch herum dreht:
+// const int SERVO_ZU = 90;
+// const int SERVO_OFFEN = 0;
+
+// Wenn der Servo zu weit dreht:
+// SERVO_OFFEN kleiner machen, z. B. 60 oder 45
+
+const int SERVO_OFFEN_DAUER = 1500; // wie lange offen bleiben in Millisekunden
+
+// =====================================================
+// STATUS
+// =====================================================
+bool hatAktivesSparziel = false;
+bool hatteVorherAktivesSparziel = false;
+bool zielIstAbgeschlossen = false;
+bool servoAusgeloest = false;
+
+// =====================================================
+// WERTE
+// =====================================================
+float gesamt = 0.00;
+float zielBetrag = 0.00;
+float fortschritt = 0.00;
+String zielTitel = "Kein Ziel";
+
+unsigned long letzteAktualisierung = 0;
+const unsigned long updateIntervall = 10000; // alle 10 Sekunden
+
+// =====================================================
+// SETUP
+// =====================================================
+void setup() {
+  Serial.begin(115200);
+
+  // Sensoren starten
+  pinMode(SENSOR_1_PIN, INPUT);
+  pinMode(SENSOR_2_PIN, INPUT);
+  pinMode(SENSOR_5_PIN, INPUT);
+
+  // Servo kurz initialisieren und auf ZU stellen
+  servo.attach(SERVO_PIN);
+  servo.write(SERVO_ZU);
+  delay(500);
+  servo.detach();
+
+  // LED Ring starten
+  ring.begin();
+  ring.setBrightness(40); // Helligkeit: 0 bis 255
+  ring.clear();
+  ring.show();
+
+  // Display starten
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("Display nicht gefunden");
+  } else {
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.println("Smartes");
+    display.println("Sparschwein");
+    display.println("");
+    display.println("Start...");
+    display.display();
+  }
+
+  // WLAN verbinden
+  WiFi.begin(ssid, password);
+
+  Serial.println("Verbinde mit WLAN...");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WLAN verbunden!");
+
+  ladeSparziel();
+  zeigeSparziel();
+  zeigeLedFortschritt();
+}
+
+// =====================================================
+// LOOP
+// =====================================================
+void loop() {
+  // Sensoren zaehlen nur, wenn ein aktives Sparziel vorhanden ist
+  if (hatAktivesSparziel) {
+    pruefeSensor(SENSOR_1_PIN, letzterZustand1, letzteErkennung1, 1.00);
+    pruefeSensor(SENSOR_2_PIN, letzterZustand2, letzteErkennung2, 2.00);
+    pruefeSensor(SENSOR_5_PIN, letzterZustand5, letzteErkennung5, 5.00);
+  }
+
+  // Alle 10 Sekunden Daten von PHP neu laden
+  if (millis() - letzteAktualisierung > updateIntervall) {
+    letzteAktualisierung = millis();
+
+    ladeSparziel();
+    zeigeSparziel();
+    zeigeLedFortschritt();
+
+    Serial.println("Daten aktualisiert");
+  }
+}
+
+// =====================================================
+// SENSOR PRUEFEN
+// =====================================================
+void pruefeSensor(int sensorPin, bool &letzterZustand, unsigned long &letzteErkennung, float muenzWert) {
+  bool aktuellerZustand = digitalRead(sensorPin);
+
+  // Muenze erkannt, wenn Lichtstrahl unterbrochen wird
+  if (letzterZustand == HIGH && aktuellerZustand == LOW) {
+    if (millis() - letzteErkennung > debounceZeit) {
+      letzteErkennung = millis();
+
+      Serial.print("Muenze erkannt: ");
+      Serial.print(muenzWert, 2);
+      Serial.println(" Fr.");
+
+      sendeMuenze(muenzWert);
+    }
+  }
+
+  letzterZustand = aktuellerZustand;
+}
+
+// =====================================================
+// MUENZE AN PHP SENDEN
+// =====================================================
+void sendeMuenze(float wert) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Kein WLAN");
+    return;
+  }
+
+  HTTPClient http;
+
+  http.begin(einwurfUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  String json = "{";
+  json += "\"geraete_id\":\"" + geraeteId + "\",";
+  json += "\"muenz_wert\":" + String(wert, 2);
+  json += "}";
+
+  Serial.println("Sende JSON:");
+  Serial.println(json);
+
+  int httpResponseCode = http.POST(json);
+
+  Serial.print("Einwurf HTTP: ");
+  Serial.println(httpResponseCode);
+
+  String response = http.getString();
+
+  Serial.println("Einwurf Antwort:");
+  Serial.println(response);
+
+  http.end();
+
+  if (httpResponseCode == 200 && response.indexOf("success") >= 0) {
+    ladeSparziel();
+    zeigeSparziel();
+    zeigeLedFortschritt();
+    erfolgAnimation();
+  }
+}
+
+// =====================================================
+// SPARZIEL VON PHP LADEN
+// =====================================================
+void ladeSparziel() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Kein WLAN fuer Sparziel");
+    return;
+  }
+
+  HTTPClient http;
+
+  http.begin(sparzielUrl);
+
+  int httpCode = http.GET();
+
+  Serial.print("Sparziel HTTP: ");
+  Serial.println(httpCode);
+
+  String response = http.getString();
+
+  Serial.println("Sparziel Antwort:");
+  Serial.println(response);
+
+  http.end();
+
+  // Fall 1: Aktives Sparziel vorhanden
+  if (httpCode == 200 && response.indexOf("\"status\":\"success\"") >= 0) {
+    hatAktivesSparziel = true;
+    hatteVorherAktivesSparziel = true;
+    zielIstAbgeschlossen = false;
+    servoAusgeloest = false;
+
+    zielTitel = leseStringAusJson(response, "titel");
+    zielBetrag = leseFloatAusJson(response, "ziel_betrag");
+    gesamt = leseFloatAusJson(response, "aktueller_betrag");
+    fortschritt = leseFloatAusJson(response, "fortschritt");
+
+    Serial.println("Aktives Sparziel geladen:");
+    Serial.print("Titel: ");
+    Serial.println(zielTitel);
+    Serial.print("Zielbetrag: ");
+    Serial.println(zielBetrag);
+    Serial.print("Aktueller Betrag: ");
+    Serial.println(gesamt);
+    Serial.print("Fortschritt: ");
+    Serial.println(fortschritt);
+
+    return;
+  }
+
+  // Fall 2: Kein aktives Sparziel vorhanden
+  if (httpCode == 200 && response.indexOf("\"status\":\"no_goal\"") >= 0) {
+    Serial.println("Kein aktives Sparziel vorhanden.");
+
+    hatAktivesSparziel = false;
+    zielIstAbgeschlossen = true;
+
+    zielTitel = "Sparziel";
+    zielBetrag = 0.00;
+    gesamt = 0.00;
+    fortschritt = 0.00;
+
+    // Wenn vorher ein Ziel aktiv war und jetzt keines mehr da ist,
+    // wurde es gerade abgeschlossen. Dann Servo einmal oeffnen.
+    if (hatteVorherAktivesSparziel && !servoAusgeloest) {
+      servoAusgeloest = true;
+      hatteVorherAktivesSparziel = false;
+
+      Serial.println("Sparziel wurde abgeschlossen. Servo oeffnet.");
+      servoOeffnenUndSchliessen();
+    }
+
+    return;
+  }
+
+  // Fall 3: Fehler
+  zielTitel = "Sparziel";
+  zielBetrag = 0.00;
+  gesamt = 0.00;
+  fortschritt = 0.00;
+
+  hatAktivesSparziel = false;
+  zielIstAbgeschlossen = false;
+
+  Serial.println("Fehler oder kein gueltiges Sparziel.");
+}
+
+// =====================================================
+// DISPLAY: NORMALE SPARZIEL-ANZEIGE
+// =====================================================
+void zeigeSparziel() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // Kein aktives Ziel: Display fordert neues Ziel an
+  if (!hatAktivesSparziel) {
+    display.setTextSize(2);
+    display.setCursor(0, 8);
+    display.println("SPARZIEL");
+
+    display.setCursor(0, 34);
+    display.println("EINGEBEN");
+
+    display.display();
+    return;
+  }
+
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+
+  if (fortschritt >= 100) {
+    display.println("Ziel erreicht!");
+  } else {
+    display.println("Sparziel:");
+  }
+
+  display.setCursor(0, 10);
+  display.println(zielTitel);
+
+  display.setTextSize(1);
+  display.setCursor(0, 28);
+  display.print(gesamt, 2);
+  display.print(" / ");
+  display.print(zielBetrag, 2);
+  display.println(" Fr.");
+
+  display.setTextSize(2);
+  display.setCursor(0, 44);
+  display.print(fortschritt, 0);
+  display.println("%");
+
+  display.display();
+}
+
+// =====================================================
+// DISPLAY: SPARSCHWEIN OFFEN
+// =====================================================
+void zeigeSparschweinOffen() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setTextSize(2);
+  display.setCursor(0, 8);
+  display.println("SPAR-");
+
+  display.setCursor(0, 26);
+  display.println("SCHWEIN");
+
+  display.setTextSize(2);
+  display.setCursor(26, 48);
+  display.println("OFFEN");
+
+  display.display();
+}
+
+// =====================================================
+// LED RING FORTSCHRITT
+// =====================================================
+void zeigeLedFortschritt() {
+  ring.clear();
+
+  // Kein aktives Ziel: LED Ring aus
+  if (!hatAktivesSparziel) {
+    ring.show();
+    return;
+  }
+
+  int aktiveLeds = round((fortschritt / 100.0) * NUM_LEDS);
+
+  if (aktiveLeds > NUM_LEDS) {
+    aktiveLeds = NUM_LEDS;
+  }
+
+  for (int i = 0; i < aktiveLeds; i++) {
+    if (fortschritt >= 100) {
+      ring.setPixelColor(i, ring.Color(0, 255, 0));      // gruen
+    } else if (fortschritt < 50) {
+      ring.setPixelColor(i, ring.Color(255, 0, 0));      // rot
+    } else {
+      ring.setPixelColor(i, ring.Color(255, 180, 0));    // gelb/orange
+    }
+  }
+
+  ring.show();
+}
+
+// =====================================================
+// LED ANIMATION BEI EINWURF
+// =====================================================
+void erfolgAnimation() {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    ring.setPixelColor(i, ring.Color(0, 255, 0));
+    ring.show();
+    delay(40);
+  }
+
+  delay(200);
+
+  zeigeLedFortschritt();
+}
+
+// =====================================================
+// SERVO: OEFFNEN UND WIEDER SCHLIESSEN
+// =====================================================
+void servoOeffnenUndSchliessen() {
+  Serial.println("Servo oeffnet auf feste Position.");
+
+  // Nur beim Abschliessen: gross auf Display anzeigen
+  zeigeSparschweinOffen();
+
+  // Kurze LED-Animation
+  for (int r = 0; r < 2; r++) {
+    ring.clear();
+    ring.show();
+    delay(120);
+
+    for (int i = 0; i < NUM_LEDS; i++) {
+      ring.setPixelColor(i, ring.Color(0, 255, 0));
+    }
+
+    ring.show();
+    delay(120);
+  }
+
+  // Servo aktivieren
+  servo.attach(SERVO_PIN);
+  delay(200);
+
+  // Zuerst sicher auf geschlossen
+  servo.write(SERVO_ZU);
+  delay(400);
+
+  // Dann auf offen fahren
+  servo.write(SERVO_OFFEN);
+  delay(SERVO_OFFEN_DAUER);
+
+  // Wieder schliessen
+  servo.write(SERVO_ZU);
+  delay(600);
+
+  // Servo trennen, damit er nicht brummt
+  servo.detach();
+
+  Serial.println("Servo fertig.");
+
+  // Text kurz stehen lassen
+  delay(2000);
+
+  // Danach Display auf "Sparziel eingeben"
+  zeigeSparziel();
+  zeigeLedFortschritt();
+}
+
+// =====================================================
+// JSON-HILFSFUNKTION FUER TEXT
+// =====================================================
+String leseStringAusJson(String json, String key) {
+  String suchText = "\"" + key + "\":\"";
+
+  int startIndex = json.indexOf(suchText);
+
+  if (startIndex < 0) {
+    return "";
+  }
+
+  startIndex += suchText.length();
+
+  int endIndex = json.indexOf("\"", startIndex);
+
+  if (endIndex < 0) {
+    return "";
+  }
+
+  return json.substring(startIndex, endIndex);
+}
+
+// =====================================================
+// JSON-HILFSFUNKTION FUER ZAHLEN
+// =====================================================
+float leseFloatAusJson(String json, String key) {
+  String suchText = "\"" + key + "\":";
+
+  int startIndex = json.indexOf(suchText);
+
+  if (startIndex < 0) {
+    return 0.00;
+  }
+
+  startIndex += suchText.length();
+
+  int endIndexKomma = json.indexOf(",", startIndex);
+  int endIndexKlammer = json.indexOf("}", startIndex);
+
+  int endIndex;
+
+  if (endIndexKomma < 0) {
+    endIndex = endIndexKlammer;
+  } else {
+    endIndex = endIndexKomma;
+  }
+
+  if (endIndex < 0) {
+    return 0.00;
+  }
+
+  String wertString = json.substring(startIndex, endIndex);
+  wertString.replace("\"", "");
+
+  return wertString.toFloat();
+}

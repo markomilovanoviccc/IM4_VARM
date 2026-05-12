@@ -8,7 +8,7 @@ require_once __DIR__ . '/../system/config.php';
 
 try {
     // 2. PDO-Verbindung aufbauen
-    $pdo = new PDO("mysql:host=" . $host . ";dbname=" . $db . ";charset=utf8", $user, $pass);
+    $pdo = new PDO("mysql:host=" . $host . ";dbname=" . $db . ";charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     echo json_encode(["status" => "error", "message" => "Verbindungsfehler zur Datenbank"]);
