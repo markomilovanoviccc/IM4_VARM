@@ -25,11 +25,10 @@ String sparzielUrl = "https://IM4-VARM.villelindskog.ch/api/sparziel.php?geraete
 // =====================================================
 // LICHTSENSOREN FUER MUENZEN
 // =====================================================
-// Diese Pins kannst du anpassen, falls du andere GPIOs benutzt.
 
-#define SENSOR_1_PIN 2   // Sensor fuer 1 Franken
-#define SENSOR_2_PIN 8   // Sensor fuer 2 Franken
-#define SENSOR_5_PIN 9   // Sensor fuer 5 Franken
+#define SENSOR_1_PIN 2
+#define SENSOR_2_PIN 8
+#define SENSOR_5_PIN 9
 
 bool letzterZustand1 = HIGH;
 bool letzterZustand2 = HIGH;
@@ -39,7 +38,6 @@ unsigned long letzteErkennung1 = 0;
 unsigned long letzteErkennung2 = 0;
 unsigned long letzteErkennung5 = 0;
 
-// Schutz, damit eine Muenze nicht mehrfach gezaehlt wird
 const unsigned long debounceZeit = 800;
 
 // =====================================================
@@ -70,23 +68,8 @@ Adafruit_NeoPixel ring(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 Servo servo;
 
-// =====================================================
-// SERVO EINSTELLUNGEN
-// =====================================================
-// SERVO_ZU = Position, wenn das Sparschwein geschlossen ist.
-// SERVO_OFFEN = Position, wenn das Sparschwein kurz geoeffnet wird.
-// Wenn der Servo zu weit dreht, SERVO_OFFEN kleiner machen.
-// Beispiel: 5, 10, 15, 20
-
-const int SERVO_ZU = 0;
-const int SERVO_OFFEN = 5;
-
-// Wie lange der Servo offen bleibt
-const int SERVO_OFFEN_DAUER = 700;
-
-// Wenn der Servo falsch herum dreht, kannst du zum Beispiel testen:
-// const int SERVO_ZU = 90;
-// const int SERVO_OFFEN = 75;
+const int SERVO_ZU = 90;
+const int SERVO_OFFEN = 170;
 
 // =====================================================
 // STATUS
@@ -94,8 +77,8 @@ const int SERVO_OFFEN_DAUER = 700;
 
 bool hatAktivesSparziel = false;
 bool hatteVorherAktivesSparziel = false;
-bool zielIstAbgeschlossen = false;
 bool servoAusgeloest = false;
+bool sparschweinIstOffen = false;
 
 // =====================================================
 // WERTE FUER DISPLAY UND LED-RING
@@ -106,9 +89,35 @@ float zielBetrag = 0.00;
 float fortschritt = 0.00;
 String zielTitel = "Kein Ziel";
 
-// Alle 10 Sekunden fragt der ESP32 die PHP-Datei neu ab
+// Server alle 10 Sekunden abfragen
 unsigned long letzteAktualisierung = 0;
 const unsigned long updateIntervall = 10000;
+
+// LED nur bei Fortschrittsaenderung einschalten
+float letzterFortschrittFuerLed = -1.00;
+
+unsigned long ledEinschaltZeit = 0;
+const unsigned long ledLeuchtDauer = 30000; // 30 Sekunden. Fuer 2 Minuten: 120000
+bool ledRingIstAn = false;
+
+// =====================================================
+// DISPLAY: WLAN STATUS
+// =====================================================
+
+void zeigeWlanStatus(String zeile1, String zeile2) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setTextSize(2);
+  display.setCursor(0, 8);
+  display.println(zeile1);
+
+  display.setTextSize(1);
+  display.setCursor(0, 36);
+  display.println(zeile2);
+
+  display.display();
+}
 
 // =====================================================
 // SETUP
@@ -117,24 +126,28 @@ const unsigned long updateIntervall = 10000;
 void setup() {
   Serial.begin(115200);
 
-  // Sensoren starten
-  pinMode(SENSOR_1_PIN, INPUT);
-  pinMode(SENSOR_2_PIN, INPUT);
-  pinMode(SENSOR_5_PIN, INPUT);
+  // Sensoren mit internem Pullup starten.
+  // Dadurch zaehlt ein loser Pin nicht zufaellig Muenzen.
+  pinMode(SENSOR_1_PIN, INPUT_PULLUP);
+  pinMode(SENSOR_2_PIN, INPUT_PULLUP);
+  pinMode(SENSOR_5_PIN, INPUT_PULLUP);
 
-  // Servo kurz auf Startposition setzen und wieder trennen
-  servo.attach(SERVO_PIN);
+  // Startzustand merken, damit beim Einschalten nichts falsch erkannt wird.
+  letzterZustand1 = digitalRead(SENSOR_1_PIN);
+  letzterZustand2 = digitalRead(SENSOR_2_PIN);
+  letzterZustand5 = digitalRead(SENSOR_5_PIN);
+
+  servo.setPeriodHertz(50);
+  servo.attach(SERVO_PIN, 500, 2400);
   servo.write(SERVO_ZU);
-  delay(500);
+  delay(700);
   servo.detach();
 
-  // LED-Ring starten
   ring.begin();
   ring.setBrightness(40);
   ring.clear();
   ring.show();
 
-  // Display starten
   Wire.begin(SDA_PIN, SCL_PIN);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
@@ -151,23 +164,51 @@ void setup() {
     display.display();
   }
 
-  // WLAN verbinden
+  delay(1500);
+
+  // =====================================================
+  // WLAN verbinden mit Anzeige
+  // =====================================================
+
+  zeigeWlanStatus("WLAN", "Verbinden...");
+
   WiFi.begin(ssid, password);
 
   Serial.println("Verbinde mit WLAN...");
 
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long wlanStartZeit = millis();
+  const unsigned long wlanTimeout = 20000; // 20 Sekunden
+
+  while (WiFi.status() != WL_CONNECTED && millis() - wlanStartZeit < wlanTimeout) {
     delay(500);
     Serial.print(".");
   }
 
   Serial.println("");
-  Serial.println("WLAN verbunden!");
 
-  // Beim Start direkt Daten vom Server laden
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WLAN verbunden!");
+    Serial.print("IP-Adresse: ");
+    Serial.println(WiFi.localIP());
+
+    zeigeWlanStatus("WLAN", "Verbunden");
+    delay(1500);
+  } else {
+    Serial.println("Keine WLAN-Verbindung!");
+
+    zeigeWlanStatus("KEIN WLAN", "Verbindung fehlt");
+
+    // Code bleibt hier stehen, bis du WLAN korrigierst oder neu startest.
+    while (true) {
+      delay(1000);
+    }
+  }
+
   ladeSparziel();
   zeigeSparziel();
-  zeigeLedFortschritt();
+
+  // Beim Start nur den Fortschritt merken, LED bleibt aus
+  letzterFortschrittFuerLed = fortschritt;
 }
 
 // =====================================================
@@ -175,23 +216,28 @@ void setup() {
 // =====================================================
 
 void loop() {
-  // Muenzen werden nur gezaehlt, wenn ein aktives Sparziel vorhanden ist.
-  // Wenn kein Sparziel vorhanden ist, zeigt das Display "SPARZIEL EINGEBEN".
   if (hatAktivesSparziel) {
     pruefeSensor(SENSOR_1_PIN, letzterZustand1, letzteErkennung1, 1.00);
     pruefeSensor(SENSOR_2_PIN, letzterZustand2, letzteErkennung2, 2.00);
     pruefeSensor(SENSOR_5_PIN, letzterZustand5, letzteErkennung5, 5.00);
   }
 
-  // Regelmaessig Server abfragen
   if (millis() - letzteAktualisierung > updateIntervall) {
     letzteAktualisierung = millis();
 
     ladeSparziel();
     zeigeSparziel();
-    zeigeLedFortschritt();
+
+    // LED nur einschalten, wenn sich der Fortschritt geaendert hat
+    pruefeObLedAktualisiertWerdenSoll();
 
     Serial.println("Daten aktualisiert");
+  }
+
+  // LED-Ring nach Ablauf der Zeit ausschalten
+  if (ledRingIstAn && millis() - ledEinschaltZeit > ledLeuchtDauer) {
+    ledRingAusschalten();
+    Serial.println("LED-Ring automatisch ausgeschaltet");
   }
 }
 
@@ -202,8 +248,8 @@ void loop() {
 void pruefeSensor(int sensorPin, bool &letzterZustand, unsigned long &letzteErkennung, float muenzWert) {
   bool aktuellerZustand = digitalRead(sensorPin);
 
-  // Muenze erkannt, wenn Lichtstrahl unterbrochen wird.
-  // Falls dein Sensor genau umgekehrt funktioniert, unten HIGH und LOW tauschen.
+  // Mit INPUT_PULLUP ist der normale Zustand HIGH.
+  // Eine Muenze wird erkannt, wenn der Sensor auf LOW zieht.
   if (letzterZustand == HIGH && aktuellerZustand == LOW) {
     if (millis() - letzteErkennung > debounceZeit) {
       letzteErkennung = millis();
@@ -226,6 +272,7 @@ void pruefeSensor(int sensorPin, bool &letzterZustand, unsigned long &letzteErke
 void sendeMuenze(float wert) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Kein WLAN");
+    zeigeWlanStatus("KEIN WLAN", "Muenze nicht gesendet");
     return;
   }
 
@@ -257,8 +304,10 @@ void sendeMuenze(float wert) {
   if (httpResponseCode == 200 && response.indexOf("success") >= 0) {
     ladeSparziel();
     zeigeSparziel();
-    zeigeLedFortschritt();
+
+    // Bei Muenzeinwurf LED bewusst einschalten
     erfolgAnimation();
+    letzterFortschrittFuerLed = fortschritt;
   }
 }
 
@@ -269,6 +318,7 @@ void sendeMuenze(float wert) {
 void ladeSparziel() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Kein WLAN fuer Sparziel");
+    zeigeWlanStatus("KEIN WLAN", "Server nicht erreichbar");
     return;
   }
 
@@ -288,11 +338,17 @@ void ladeSparziel() {
 
   http.end();
 
-  // Fall 1: Es gibt ein aktives Sparziel
+  // FALL 1: Es gibt ein aktives Sparziel
   if (httpCode == 200 && response.indexOf("\"status\":\"success\"") >= 0) {
+
+    if (sparschweinIstOffen) {
+      Serial.println("Neues Sparziel erkannt. Sparschwein wird geschlossen.");
+      servoSchliessen();
+      sparschweinIstOffen = false;
+    }
+
     hatAktivesSparziel = true;
     hatteVorherAktivesSparziel = true;
-    zielIstAbgeschlossen = false;
     servoAusgeloest = false;
 
     zielTitel = leseStringAusJson(response, "titel");
@@ -313,41 +369,39 @@ void ladeSparziel() {
     return;
   }
 
-  // Fall 2: Kein aktives Sparziel vorhanden
-  // Das passiert nach dem Abschliessen auf der Website.
+  // FALL 2: Kein aktives Sparziel vorhanden
   if (httpCode == 200 && response.indexOf("\"status\":\"no_goal\"") >= 0) {
     Serial.println("Kein aktives Sparziel vorhanden.");
 
     hatAktivesSparziel = false;
-    zielIstAbgeschlossen = true;
 
     zielTitel = "Sparziel";
     zielBetrag = 0.00;
     gesamt = 0.00;
     fortschritt = 0.00;
 
-    // Wenn vorher ein Ziel aktiv war und jetzt keines mehr aktiv ist,
-    // wurde es gerade abgeschlossen.
-    // Dann oeffnet der Servo einmal kurz.
+    ledRingAusschalten();
+    letzterFortschrittFuerLed = -1.00;
+
     if (hatteVorherAktivesSparziel && !servoAusgeloest) {
       servoAusgeloest = true;
       hatteVorherAktivesSparziel = false;
 
-      Serial.println("Sparziel wurde abgeschlossen. Servo oeffnet.");
-      servoOeffnenUndSchliessen();
+      Serial.println("Sparziel wurde abgeschlossen. Servo oeffnet und bleibt offen.");
+      servoOeffnen();
+      sparschweinIstOffen = true;
     }
 
     return;
   }
 
-  // Fall 3: Fehler oder ungueltige Antwort
+  // FALL 3: Fehler oder ungueltige Antwort
   zielTitel = "Sparziel";
   zielBetrag = 0.00;
   gesamt = 0.00;
   fortschritt = 0.00;
 
   hatAktivesSparziel = false;
-  zielIstAbgeschlossen = false;
 
   Serial.println("Fehler oder kein gueltiges Sparziel.");
 }
@@ -360,14 +414,20 @@ void zeigeSparziel() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  // Wenn kein aktives Ziel vorhanden ist
   if (!hatAktivesSparziel) {
     display.setTextSize(2);
-    display.setCursor(0, 8);
+    display.setCursor(0, 0);
     display.println("SPARZIEL");
 
-    display.setCursor(0, 34);
+    display.setCursor(0, 18);
     display.println("EINGEBEN");
+
+    display.setTextSize(1);
+    display.setCursor(0, 44);
+    display.println("Bitte Sparschwein");
+
+    display.setCursor(0, 54);
+    display.println("zumachen");
 
     display.display();
     return;
@@ -423,15 +483,45 @@ void zeigeSparschweinOffen() {
 }
 
 // =====================================================
+// LED: NUR BEI AENDERUNG EINSCHALTEN
+// =====================================================
+
+void pruefeObLedAktualisiertWerdenSoll() {
+  if (!hatAktivesSparziel) {
+    ledRingAusschalten();
+    letzterFortschrittFuerLed = -1.00;
+    return;
+  }
+
+  // Beim ersten aktiven Ziel nur merken, aber LED nicht einschalten
+  if (letzterFortschrittFuerLed < 0) {
+    letzterFortschrittFuerLed = fortschritt;
+    return;
+  }
+
+  // Kleine Rundung, damit 50.000 und 50.001 nicht als Aenderung zaehlen
+  int neuerFortschritt = round(fortschritt);
+  int alterFortschritt = round(letzterFortschrittFuerLed);
+
+  if (neuerFortschritt != alterFortschritt) {
+    letzterFortschrittFuerLed = fortschritt;
+
+    zeigeLedFortschritt();
+
+    Serial.println("Fortschritt geaendert. LED-Ring eingeschaltet.");
+  }
+}
+
+// =====================================================
 // LED-RING: FORTSCHRITT ANZEIGEN
 // =====================================================
 
 void zeigeLedFortschritt() {
   ring.clear();
 
-  // Wenn kein Ziel aktiv ist, bleibt der LED-Ring aus.
   if (!hatAktivesSparziel) {
     ring.show();
+    ledRingIstAn = false;
     return;
   }
 
@@ -452,6 +542,19 @@ void zeigeLedFortschritt() {
   }
 
   ring.show();
+
+  ledEinschaltZeit = millis();
+  ledRingIstAn = true;
+}
+
+// =====================================================
+// LED-RING: AUSSCHALTEN
+// =====================================================
+
+void ledRingAusschalten() {
+  ring.clear();
+  ring.show();
+  ledRingIstAn = false;
 }
 
 // =====================================================
@@ -471,16 +574,14 @@ void erfolgAnimation() {
 }
 
 // =====================================================
-// SERVO: OEFFNEN UND WIEDER SCHLIESSEN
+// SERVO: OEFFNEN
 // =====================================================
 
-void servoOeffnenUndSchliessen() {
-  Serial.println("Servo oeffnet kurz.");
+void servoOeffnen() {
+  Serial.println("Servo oeffnet.");
 
-  // Nur beim Abschliessen anzeigen
   zeigeSparschweinOffen();
 
-  // Kurze LED-Animation
   for (int r = 0; r < 2; r++) {
     ring.clear();
     ring.show();
@@ -494,33 +595,42 @@ void servoOeffnenUndSchliessen() {
     delay(120);
   }
 
-  // Servo aktivieren
-  servo.attach(SERVO_PIN);
+  servo.setPeriodHertz(50);
+  servo.attach(SERVO_PIN, 500, 2400);
   delay(200);
 
-  // Auf geschlossen stellen
-  servo.write(SERVO_ZU);
-  delay(300);
-
-  // Kurz oeffnen
   servo.write(SERVO_OFFEN);
-  delay(SERVO_OFFEN_DAUER);
+  delay(700);
 
-  // Wieder schliessen
-  servo.write(SERVO_ZU);
-  delay(300);
-
-  // Servo trennen, damit er nicht weiter brummt
   servo.detach();
 
-  Serial.println("Servo fertig.");
+  Serial.println("Servo ist offen.");
 
-  // Text kurz stehen lassen
-  delay(2000);
+  delay(1500);
 
-  // Danach wieder normale Anzeige
   zeigeSparziel();
-  zeigeLedFortschritt();
+
+  // Danach LED wieder ausschalten, weil kein aktives Ziel vorhanden ist
+  ledRingAusschalten();
+}
+
+// =====================================================
+// SERVO: SCHLIESSEN
+// =====================================================
+
+void servoSchliessen() {
+  Serial.println("Servo schliesst.");
+
+  servo.setPeriodHertz(50);
+  servo.attach(SERVO_PIN, 500, 2400);
+  delay(200);
+
+  servo.write(SERVO_ZU);
+  delay(700);
+
+  servo.detach();
+
+  Serial.println("Servo ist geschlossen.");
 }
 
 // =====================================================
