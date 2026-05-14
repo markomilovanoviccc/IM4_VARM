@@ -1,17 +1,11 @@
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_NeoPixel.h>
 #include <ESP32Servo.h>
-
-// =====================================================
-// WLAN
-// =====================================================
-
-const char* ssid = "netopia";
-const char* password = "123456789abcdefgh";
 
 // =====================================================
 // API / SERVER
@@ -28,7 +22,7 @@ String sparzielUrl = "https://IM4-VARM.villelindskog.ch/api/sparziel.php?geraete
 
 #define SENSOR_1_PIN 2
 #define SENSOR_2_PIN 8
-#define SENSOR_5_PIN 9
+#define SENSOR_5_PIN 20
 
 bool letzterZustand1 = HIGH;
 bool letzterZustand2 = HIGH;
@@ -39,6 +33,12 @@ unsigned long letzteErkennung2 = 0;
 unsigned long letzteErkennung5 = 0;
 
 const unsigned long debounceZeit = 800;
+
+// =====================================================
+// WLAN RESET BUTTON
+// =====================================================
+
+#define WLAN_RESET_BUTTON_PIN 22
 
 // =====================================================
 // OLED DISPLAY
@@ -120,19 +120,183 @@ void zeigeWlanStatus(String zeile1, String zeile2) {
 }
 
 // =====================================================
+// WLAN MIT WIFI MANAGER
+// =====================================================
+
+void verbindeWlanMitManager() {
+  WiFiManager wm;
+
+  zeigeWlanStatus("WLAN", "Verbinden...");
+  Serial.println("WLAN wird verbunden...");
+
+  // Laenger auf gespeichertes WLAN warten
+  wm.setConnectTimeout(25);        // 25 Sekunden warten
+  wm.setConfigPortalTimeout(180);  // Setup-Portal bleibt 3 Minuten offen
+
+  // Diese Anzeige kommt nur, wenn wirklich das Setup-WLAN gestartet wird
+wm.setAPCallback([](WiFiManager *myWiFiManager) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("WLAN Setup:");
+
+  display.setCursor(0, 12);
+  display.println("Oeffne WLAN:");
+
+  display.setCursor(0, 24);
+  display.println("Sparschwein-Setup");
+
+  display.setCursor(0, 38);
+  display.println("Falls nichts oeffnet:");
+
+  display.setCursor(0, 50);
+  display.println("192.168.4.1");
+
+  display.display();
+
+  Serial.println("Setup-WLAN gestartet:");
+  Serial.println("Sparschwein-Setup");
+  Serial.println("Falls keine Seite aufgeht:");
+  Serial.println("http://192.168.4.1");
+});
+
+  wm.setTitle("Spärkässeli");
+
+  wm.setCustomHeadElement(
+    "<style>"
+    "body{"
+      "font-family:Arial,Helvetica,sans-serif;"
+      "background:#f7f5ef;"
+      "color:#222;"
+      "margin:0;"
+    "}"
+
+    ".wrap{"
+      "max-width:420px;"
+      "margin:30px auto;"
+      "padding:28px;"
+      "background:#ffffff;"
+      "border-radius:24px;"
+      "box-shadow:0 12px 30px rgba(0,0,0,0.12);"
+    "}"
+
+    "h1{"
+      "text-align:center;"
+      "font-size:34px;"
+      "font-weight:800;"
+      "margin:0 0 22px 0;"
+      "color:#7b2be8;"
+    "}"
+
+    "p{"
+      "text-align:center;"
+      "color:#444;"
+      "font-size:15px;"
+      "line-height:1.45;"
+    "}"
+
+    "input,select{"
+      "width:100%;"
+      "box-sizing:border-box;"
+      "border:1px solid #d8d0c7;"
+      "border-radius:12px;"
+      "padding:12px;"
+      "font-size:16px;"
+      "margin:8px 0 16px 0;"
+      "background:#fff;"
+    "}"
+
+    "input:focus,select:focus{"
+      "outline:none;"
+      "border-color:#8b35df;"
+      "box-shadow:0 0 0 3px rgba(139,53,223,0.15);"
+    "}"
+
+    "button,input[type=submit]{"
+      "width:100%;"
+      "border:0;"
+      "border-radius:12px;"
+      "padding:14px;"
+      "font-size:16px;"
+      "font-weight:700;"
+      "color:white;"
+      "background:linear-gradient(90deg,#c12d8a,#6517dc);"
+    "}"
+
+    "a{"
+      "color:#7b2be8;"
+      "font-weight:700;"
+    "}"
+    "</style>"
+  );
+
+  bool verbunden = wm.autoConnect("Sparschwein-Setup");
+
+  if (!verbunden) {
+    Serial.println("WLAN Verbindung fehlgeschlagen.");
+    zeigeWlanStatus("KEIN WLAN", "Neustart...");
+    delay(3000);
+    ESP.restart();
+  }
+
+  Serial.println("WLAN verbunden!");
+  Serial.print("IP-Adresse: ");
+  Serial.println(WiFi.localIP());
+
+  zeigeWlanStatus("WLAN", "Verbunden");
+  delay(1500);
+}
+
+// =====================================================
+// WLAN RESET BUTTON PRUEFEN
+// =====================================================
+
+void pruefeWlanResetButton() {
+  if (digitalRead(WLAN_RESET_BUTTON_PIN) == LOW) {
+    unsigned long startZeit = millis();
+
+    zeigeWlanStatus("WLAN", "Reset halten...");
+    Serial.println("WLAN Reset Button gedrueckt...");
+
+    while (digitalRead(WLAN_RESET_BUTTON_PIN) == LOW) {
+      if (millis() - startZeit > 3000) {
+        WiFiManager wm;
+
+        zeigeWlanStatus("WLAN", "Daten geloescht");
+        Serial.println("WLAN-Daten werden geloescht...");
+
+        wm.resetSettings();
+
+        delay(1500);
+
+        zeigeWlanStatus("RESET", "Neustart...");
+        delay(1000);
+
+        ESP.restart();
+      }
+
+      delay(50);
+    }
+
+    zeigeSparziel();
+  }
+}
+
+// =====================================================
 // SETUP
 // =====================================================
 
 void setup() {
   Serial.begin(115200);
 
-  // Sensoren mit internem Pullup starten.
-  // Dadurch zaehlt ein loser Pin nicht zufaellig Muenzen.
   pinMode(SENSOR_1_PIN, INPUT_PULLUP);
   pinMode(SENSOR_2_PIN, INPUT_PULLUP);
   pinMode(SENSOR_5_PIN, INPUT_PULLUP);
 
-  // Startzustand merken, damit beim Einschalten nichts falsch erkannt wird.
+  pinMode(WLAN_RESET_BUTTON_PIN, INPUT_PULLUP);
+
   letzterZustand1 = digitalRead(SENSOR_1_PIN);
   letzterZustand2 = digitalRead(SENSOR_2_PIN);
   letzterZustand5 = digitalRead(SENSOR_5_PIN);
@@ -166,48 +330,11 @@ void setup() {
 
   delay(1500);
 
-  // =====================================================
-  // WLAN verbinden mit Anzeige
-  // =====================================================
-
-  zeigeWlanStatus("WLAN", "Verbinden...");
-
-  WiFi.begin(ssid, password);
-
-  Serial.println("Verbinde mit WLAN...");
-
-  unsigned long wlanStartZeit = millis();
-  const unsigned long wlanTimeout = 20000; // 20 Sekunden
-
-  while (WiFi.status() != WL_CONNECTED && millis() - wlanStartZeit < wlanTimeout) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("WLAN verbunden!");
-    Serial.print("IP-Adresse: ");
-    Serial.println(WiFi.localIP());
-
-    zeigeWlanStatus("WLAN", "Verbunden");
-    delay(1500);
-  } else {
-    Serial.println("Keine WLAN-Verbindung!");
-
-    zeigeWlanStatus("KEIN WLAN", "Verbindung fehlt");
-
-    // Code bleibt hier stehen, bis du WLAN korrigierst oder neu startest.
-    while (true) {
-      delay(1000);
-    }
-  }
+  verbindeWlanMitManager();
 
   ladeSparziel();
   zeigeSparziel();
 
-  // Beim Start nur den Fortschritt merken, LED bleibt aus
   letzterFortschrittFuerLed = fortschritt;
 }
 
@@ -216,6 +343,8 @@ void setup() {
 // =====================================================
 
 void loop() {
+  pruefeWlanResetButton();
+
   if (hatAktivesSparziel) {
     pruefeSensor(SENSOR_1_PIN, letzterZustand1, letzteErkennung1, 1.00);
     pruefeSensor(SENSOR_2_PIN, letzterZustand2, letzteErkennung2, 2.00);
@@ -228,13 +357,11 @@ void loop() {
     ladeSparziel();
     zeigeSparziel();
 
-    // LED nur einschalten, wenn sich der Fortschritt geaendert hat
     pruefeObLedAktualisiertWerdenSoll();
 
     Serial.println("Daten aktualisiert");
   }
 
-  // LED-Ring nach Ablauf der Zeit ausschalten
   if (ledRingIstAn && millis() - ledEinschaltZeit > ledLeuchtDauer) {
     ledRingAusschalten();
     Serial.println("LED-Ring automatisch ausgeschaltet");
@@ -248,8 +375,6 @@ void loop() {
 void pruefeSensor(int sensorPin, bool &letzterZustand, unsigned long &letzteErkennung, float muenzWert) {
   bool aktuellerZustand = digitalRead(sensorPin);
 
-  // Mit INPUT_PULLUP ist der normale Zustand HIGH.
-  // Eine Muenze wird erkannt, wenn der Sensor auf LOW zieht.
   if (letzterZustand == HIGH && aktuellerZustand == LOW) {
     if (millis() - letzteErkennung > debounceZeit) {
       letzteErkennung = millis();
@@ -303,10 +428,16 @@ void sendeMuenze(float wert) {
 
   if (httpResponseCode == 200 && response.indexOf("success") >= 0) {
     ladeSparziel();
+
+    // Schwein anzeigen
+    zeigeOinkAnimation();
+
+    // LED-Animation laeuft, waehrend das Schwein sichtbar bleibt
+    erfolgAnimation();
+
+    // Danach wieder normale Anzeige
     zeigeSparziel();
 
-    // Bei Muenzeinwurf LED bewusst einschalten
-    erfolgAnimation();
     letzterFortschrittFuerLed = fortschritt;
   }
 }
@@ -338,7 +469,6 @@ void ladeSparziel() {
 
   http.end();
 
-  // FALL 1: Es gibt ein aktives Sparziel
   if (httpCode == 200 && response.indexOf("\"status\":\"success\"") >= 0) {
 
     if (sparschweinIstOffen) {
@@ -369,7 +499,6 @@ void ladeSparziel() {
     return;
   }
 
-  // FALL 2: Kein aktives Sparziel vorhanden
   if (httpCode == 200 && response.indexOf("\"status\":\"no_goal\"") >= 0) {
     Serial.println("Kein aktives Sparziel vorhanden.");
 
@@ -395,7 +524,6 @@ void ladeSparziel() {
     return;
   }
 
-  // FALL 3: Fehler oder ungueltige Antwort
   zielTitel = "Sparziel";
   zielBetrag = 0.00;
   gesamt = 0.00;
@@ -461,6 +589,38 @@ void zeigeSparziel() {
 }
 
 // =====================================================
+// DISPLAY: OINK ANIMATION BEI MUENZEINWURF
+// =====================================================
+
+void zeigeOinkAnimation() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // Kopf
+  display.drawCircle(64, 26, 18, SSD1306_WHITE);
+
+  // Ohren
+  display.drawTriangle(48, 15, 55, 5, 58, 18, SSD1306_WHITE);
+  display.drawTriangle(80, 15, 73, 5, 70, 18, SSD1306_WHITE);
+
+  // Augen
+  display.fillCircle(57, 23, 2, SSD1306_WHITE);
+  display.fillCircle(71, 23, 2, SSD1306_WHITE);
+
+  // Nase
+  display.drawRoundRect(55, 31, 18, 10, 5, SSD1306_WHITE);
+  display.fillCircle(60, 36, 1, SSD1306_WHITE);
+  display.fillCircle(68, 36, 1, SSD1306_WHITE);
+
+  // Text
+  display.setTextSize(2);
+  display.setCursor(35, 49);
+  display.println("OINK!");
+
+  display.display();
+}
+
+// =====================================================
 // DISPLAY: SPARSCHWEIN OFFEN
 // =====================================================
 
@@ -493,21 +653,17 @@ void pruefeObLedAktualisiertWerdenSoll() {
     return;
   }
 
-  // Beim ersten aktiven Ziel nur merken, aber LED nicht einschalten
   if (letzterFortschrittFuerLed < 0) {
     letzterFortschrittFuerLed = fortschritt;
     return;
   }
 
-  // Kleine Rundung, damit 50.000 und 50.001 nicht als Aenderung zaehlen
   int neuerFortschritt = round(fortschritt);
   int alterFortschritt = round(letzterFortschrittFuerLed);
 
   if (neuerFortschritt != alterFortschritt) {
     letzterFortschrittFuerLed = fortschritt;
-
     zeigeLedFortschritt();
-
     Serial.println("Fortschritt geaendert. LED-Ring eingeschaltet.");
   }
 }
@@ -610,7 +766,6 @@ void servoOeffnen() {
 
   zeigeSparziel();
 
-  // Danach LED wieder ausschalten, weil kein aktives Ziel vorhanden ist
   ledRingAusschalten();
 }
 
