@@ -15,7 +15,6 @@ if (!isset($_GET['geraete_id']) || empty($_GET['geraete_id'])) {
 $geraete_id = $_GET['geraete_id'];
 
 try {
-
     $pdo = new PDO(
         "mysql:host=" . $host . ";dbname=" . $db . ";charset=utf8mb4",
         $user,
@@ -24,7 +23,7 @@ try {
 
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Sparschwein finden
+    // Sparschwein anhand der geraete_id finden
     $stmt = $pdo->prepare("
         SELECT id, name
         FROM sparschwein
@@ -47,11 +46,13 @@ try {
 
     $sparschwein_id = $schwein['id'];
 
-    // Sparziel holen
+    // Nur aktives Sparziel holen
+    // Abgeschlossene Ziele mit ist_erreicht = 1 werden ignoriert
     $stmt = $pdo->prepare("
         SELECT titel, ziel_betrag, ist_erreicht
         FROM sparziel
         WHERE sparschwein_id = :sid
+        AND ist_erreicht = 0
         ORDER BY erstellt_am DESC
         LIMIT 1
     ");
@@ -62,15 +63,23 @@ try {
 
     $ziel = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // Wenn kein aktives Sparziel vorhanden ist
     if (!$ziel) {
         echo json_encode([
-            "status" => "error",
-            "message" => "Kein Sparziel vorhanden"
+            "status" => "no_goal",
+            "message" => "Kein aktives Sparziel vorhanden",
+            "geraete_id" => $geraete_id,
+            "sparschwein" => $schwein['name'],
+            "titel" => null,
+            "ziel_betrag" => 0,
+            "aktueller_betrag" => 0,
+            "fortschritt" => 0,
+            "ist_erreicht" => false
         ]);
         exit;
     }
 
-    // Gesamtbetrag berechnen
+    // Gesamtbetrag aus aktuellem Muenzbestand berechnen
     $stmt = $pdo->prepare("
         SELECT COALESCE(SUM(muenz_wert * anzahl), 0) AS gesamt
         FROM muenzbestand
@@ -109,7 +118,6 @@ try {
     ]);
 
 } catch (Exception $e) {
-
     echo json_encode([
         "status" => "error",
         "message" => $e->getMessage()

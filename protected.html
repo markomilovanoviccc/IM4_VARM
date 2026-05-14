@@ -1,22 +1,86 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <title>Protected Page</title>
+    <title>Smartes Sparschwein</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
-  <body>
-    <h1>Protected Page</h1>
 
-    <!-- This is where we'll dynamically show the protected content -->
+  <body>
+    <h1>Smartes Sparschwein</h1>
+
+    <!-- Login-Bereich -->
     <div id="protectedContent">
-      <h2>Welcome, <span id="userFirstName"></span> (<span id="userEmail"></span>)!</h2>
-      <p>Your user ID is: <span id="userId"></span></p>
+      <h2>
+        Willkommen, <span id="userFirstName"></span>
+        (<span id="userEmail"></span>)!
+      </h2>
+
+      <p>Deine User ID ist: <span id="userId"></span></p>
     </div>
+
+    <!-- Sparschwein-Bereich -->
+    <section>
+      <h2>Mein Sparschwein</h2>
+
+      <p>
+        <strong>Geraete-ID:</strong>
+        <span id="geraeteIdAnzeige">SPAR001</span>
+      </p>
+
+      <p>
+        <strong>Aktueller Bestand:</strong>
+        <span id="muenzbestand">Laedt...</span> Fr.
+      </p>
+    </section>
+
+    <!-- Sparziel-Bereich -->
+    <section>
+      <h2>Sparziel</h2>
+
+      <form id="sparzielForm">
+        <input
+          type="text"
+          id="titel"
+          placeholder="Sparziel, z. B. Neue Kamera"
+          required
+        >
+
+        <input
+          type="number"
+          id="zielBetrag"
+          placeholder="Zielbetrag"
+          step="0.05"
+          required
+        >
+
+        <button type="submit">Sparziel speichern</button>
+      </form>
+
+      <p>
+        <strong>Ziel:</strong>
+        <span id="sparzielTitel">Noch kein Ziel</span>
+      </p>
+
+      <p>
+        <strong>Zielbetrag:</strong>
+        <span id="sparzielBetrag">0.00</span> Fr.
+      </p>
+
+      <p>
+        <strong>Fortschritt:</strong>
+        <span id="fortschritt">0</span>%
+      </p>
+
+      <button id="zielErreichtBtn" style="display: none;">
+        Sparziel abschliessen
+      </button>
+    </section>
 
     <button id="logoutBtn">Logout</button>
 
     <script src="js/protected.js"></script>
+    <script src="js/sparschwein.js"></script>
     <script src="js/logout.js"></script>
   </body>
 </html>
