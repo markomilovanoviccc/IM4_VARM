@@ -15,16 +15,18 @@ async function checkAuth() {
 
     const result = await response.json();
     
-    // --- NEU: Vornamen auslesen und ins HTML schreiben ---
-    // Falls kein Vorname vorhanden ist, nutzen wir als Fallback "Dir" (Kässeli von Dir)
+    // --- NEU: Namen dynamisch aus der Datenbank holen ---
     const firstName = result.first_name || "Dir"; 
     
-    // Name in die Hauptüberschrift einfügen
-    document.getElementById("userFirstNameDisplay").textContent = firstName;
+    // Namen ins HTML-Feld schreiben (falls geladen)
+    const nameDisplayElement = document.getElementById("userFirstNameDisplay");
+    if (nameDisplayElement) {
+        nameDisplayElement.textContent = firstName;
+    }
     
-    // Optional: Auch den Namen im Browser-Tab (title) anpassen
+    // Auch den Browsertab-Titel dynamisch anpassen
     document.title = `Dashboard - Kässeli von ${firstName}`;
-    // ------------------------------------------------------
+    // -----------------------------------------------------
 
     // Auth erfolgreich -> Daten laden
     ladeDashboardDaten();
@@ -77,7 +79,7 @@ async function ladeDashboardDaten() {
     // --- 2c. Chart aktualisieren ---
     await loadStatistics();
 
-    // --- NEU: 2d. Achievements berechnen ---
+    // --- 2d. Achievements berechnen ---
     const fortschrittWert = parseFloat(fortschritt || 0);
     const maxZiel = parseFloat(zielBetrag || 0);
     berechneAchievements(totalCoins, fortschrittWert, maxZiel);
@@ -112,7 +114,6 @@ function renderChart(labels, data) {
   const ctx = document.getElementById('coinChart');
   if (!ctx) return;
 
-  // WICHTIG: Altes Chart zerstören, bevor ein neues drüber gezeichnet wird
   if (myChart !== null) {
       myChart.destroy();
   }
@@ -141,47 +142,40 @@ function renderChart(labels, data) {
   });
 }
 
-// --- NEU: Achievements live berechnen ---
+// --- Achievements live berechnen ---
 function berechneAchievements(totalCoins, fortschrittPercent, zielBetrag) {
   let unlockedCount = 0;
   const totalAchievements = 6;
   
-  // Hole alle Achievement-Kacheln aus dem HTML
   const achItems = document.querySelectorAll('.achievement-item');
   if (achItems.length === 0) return;
 
-  // Definiere die Regeln für deine 6 Achievements (Passend zu deinem HTML)
   const achievements = [
-    { type: 'coin', required: 1, max: 1 },                  // 1. Erste Münze
-    { type: 'coin', required: 10, max: 10 },                // 2. Fleissiger Sparer
-    { type: 'percent', required: 25, max: zielBetrag * 0.25 }, // 3. Guter Start
-    { type: 'percent', required: 50, max: zielBetrag * 0.50 }, // 4. Halbzeit
-    { type: 'coin', required: 50, max: 50 },                // 5. Münzsammler
-    { type: 'percent', required: 100, max: zielBetrag }        // 6. Ziel Erreicht
+    { type: 'coin', required: 1, max: 1 },                  
+    { type: 'coin', required: 10, max: 10 },                
+    { type: 'percent', required: 25, max: zielBetrag * 0.25 }, 
+    { type: 'percent', required: 50, max: zielBetrag * 0.50 }, 
+    { type: 'coin', required: 50, max: 50 },                
+    { type: 'percent', required: 100, max: zielBetrag }        
   ];
 
-  // Überprüfe jedes Achievement
   achievements.forEach((ach, index) => {
     const item = achItems[index];
     const progressDiv = item.querySelector('.ach-progress');
     let isUnlocked = false;
 
-    // Berechnung & Text-Update basierend auf dem Typ (Münzen oder Prozent/CHF)
     if (ach.type === 'coin') {
       isUnlocked = totalCoins >= ach.required;
-      const displayCoins = Math.min(totalCoins, ach.max); // Verhindert Werte über dem Maximum
+      const displayCoins = Math.min(totalCoins, ach.max); 
       progressDiv.textContent = `${displayCoins} / ${ach.max}`;
     } else {
       isUnlocked = fortschrittPercent >= ach.required;
       const currentChf = (zielBetrag * (fortschrittPercent / 100));
       const displayChf = Math.min(currentChf, ach.max).toFixed(2);
-      
-      // Falls kein Ziel gesetzt ist (0 CHF), zeige 0.00 an
       const maxChf = isNaN(ach.max) || ach.max === 0 ? "0.00" : ach.max.toFixed(2);
       progressDiv.textContent = `${displayChf} / ${maxChf} CHF`;
     }
 
-    // CSS Klasse anpassen (freischalten oder sperren)
     if (isUnlocked && ach.max > 0) {
       item.classList.remove('locked');
       unlockedCount++;
@@ -190,18 +184,13 @@ function berechneAchievements(totalCoins, fortschrittPercent, zielBetrag) {
     }
   });
 
-  // --- UI Update für den globalen Achievement-Fortschritt ---
-  
-  // Text: "X von 6 freigeschaltet"
   const summaryText = document.querySelector('.achievements-header p');
   if (summaryText) summaryText.textContent = `${unlockedCount} von ${totalAchievements} freigeschaltet`;
 
-  // Grosse Prozentzahl rechts oben
   const totalPercent = Math.round((unlockedCount / totalAchievements) * 100);
   const badgeValue = document.querySelector('.achievements-badge .badge-value');
   if (badgeValue) badgeValue.textContent = `${totalPercent}%`;
 
-  // Pinker Fortschrittsbalken der Achievements
   const progressBar = document.querySelector('.achievements-section .progress-bar.pink-gradient');
   if (progressBar) progressBar.style.width = `${totalPercent}%`;
 }
@@ -266,10 +255,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Automatischen Start triggern (nur noch EIN Load-Event!)
+// Automatischen Start triggern
 window.addEventListener("load", () => {
   checkAuth();
-  
-  // Alle 10 Sekunden live aktualisieren (aktualisiert jetzt auch das Chart!)
   setInterval(ladeDashboardDaten, 10000);
 });
