@@ -1,3 +1,5 @@
+/* style.css */
+
 /* ==========================================================================
    1. CSS Variablen (Design Tokens)
    ========================================================================== */
@@ -183,6 +185,7 @@ input:focus {
   font-size: 16px;
   cursor: pointer;
 }
+
 /* ==========================================================================
    6. Spezifische Styles für die Auth-Seiten (Login & Register)
    ========================================================================== */
@@ -332,6 +335,7 @@ body.auth-page {
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
+
 /* ==========================================================================
    7. Spezifische Styles für das Dashboard (protected.html)
    ========================================================================== */
@@ -487,7 +491,7 @@ body.dashboard-page {
 }
 
 .achievement-item.locked {
-  opacity: 0.5; /* Macht es dunkler, wie im Mockup */
+  opacity: 0.5;
 }
 
 .achievement-item h3 {
@@ -636,38 +640,4 @@ body.dashboard-page {
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 4px;
-}
-
-/* Unterer Testbereich */
-.simulation-card {
-  background: linear-gradient(135deg, #2b5eff 0%, #a21fff 100%);
-  color: #ffffff;
-}
-
-.sim-subtitle {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 20px;
-}
-
-.sim-buttons-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-}
-
-.btn-sim {
-  background-color: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.btn-sim:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.02);
 }
