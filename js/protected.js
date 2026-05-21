@@ -69,6 +69,11 @@ async function ladeDashboardDaten() {
     // --- 2c. Chart aktualisieren ---
     await loadStatistics();
 
+    // --- NEU: 2d. Achievements berechnen ---
+    const fortschrittWert = parseFloat(fortschritt || 0);
+    const maxZiel = parseFloat(zielBetrag || 0);
+    berechneAchievements(totalCoins, fortschrittWert, maxZiel);
+
   } catch (error) {
     console.error("Fehler beim Laden der Dashboard-Daten:", error);
   }
@@ -126,6 +131,71 @@ function renderChart(labels, data) {
       plugins: { legend: { display: false } }
     }
   });
+}
+
+// --- NEU: Achievements live berechnen ---
+function berechneAchievements(totalCoins, fortschrittPercent, zielBetrag) {
+  let unlockedCount = 0;
+  const totalAchievements = 6;
+  
+  // Hole alle Achievement-Kacheln aus dem HTML
+  const achItems = document.querySelectorAll('.achievement-item');
+  if (achItems.length === 0) return;
+
+  // Definiere die Regeln für deine 6 Achievements (Passend zu deinem HTML)
+  const achievements = [
+    { type: 'coin', required: 1, max: 1 },                  // 1. Erste Münze
+    { type: 'coin', required: 10, max: 10 },                // 2. Fleissiger Sparer
+    { type: 'percent', required: 25, max: zielBetrag * 0.25 }, // 3. Guter Start
+    { type: 'percent', required: 50, max: zielBetrag * 0.50 }, // 4. Halbzeit
+    { type: 'coin', required: 50, max: 50 },                // 5. Münzsammler
+    { type: 'percent', required: 100, max: zielBetrag }        // 6. Ziel Erreicht
+  ];
+
+  // Überprüfe jedes Achievement
+  achievements.forEach((ach, index) => {
+    const item = achItems[index];
+    const progressDiv = item.querySelector('.ach-progress');
+    let isUnlocked = false;
+
+    // Berechnung & Text-Update basierend auf dem Typ (Münzen oder Prozent/CHF)
+    if (ach.type === 'coin') {
+      isUnlocked = totalCoins >= ach.required;
+      const displayCoins = Math.min(totalCoins, ach.max); // Verhindert Werte über dem Maximum
+      progressDiv.textContent = `${displayCoins} / ${ach.max}`;
+    } else {
+      isUnlocked = fortschrittPercent >= ach.required;
+      const currentChf = (zielBetrag * (fortschrittPercent / 100));
+      const displayChf = Math.min(currentChf, ach.max).toFixed(2);
+      
+      // Falls kein Ziel gesetzt ist (0 CHF), zeige 0.00 an
+      const maxChf = isNaN(ach.max) || ach.max === 0 ? "0.00" : ach.max.toFixed(2);
+      progressDiv.textContent = `${displayChf} / ${maxChf} CHF`;
+    }
+
+    // CSS Klasse anpassen (freischalten oder sperren)
+    if (isUnlocked && ach.max > 0) {
+      item.classList.remove('locked');
+      unlockedCount++;
+    } else {
+      item.classList.add('locked');
+    }
+  });
+
+  // --- UI Update für den globalen Achievement-Fortschritt ---
+  
+  // Text: "X von 6 freigeschaltet"
+  const summaryText = document.querySelector('.achievements-header p');
+  if (summaryText) summaryText.textContent = `${unlockedCount} von ${totalAchievements} freigeschaltet`;
+
+  // Grosse Prozentzahl rechts oben
+  const totalPercent = Math.round((unlockedCount / totalAchievements) * 100);
+  const badgeValue = document.querySelector('.achievements-badge .badge-value');
+  if (badgeValue) badgeValue.textContent = `${totalPercent}%`;
+
+  // Pinker Fortschrittsbalken der Achievements
+  const progressBar = document.querySelector('.achievements-section .progress-bar.pink-gradient');
+  if (progressBar) progressBar.style.width = `${totalPercent}%`;
 }
 
 // 3. Modal-Steuerung & Event Listener
