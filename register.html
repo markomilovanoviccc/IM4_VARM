@@ -3,154 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard - Kässeli</title>
+    <title>Registrieren - Kässeli</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
-  <body class="dashboard-page">
+  <body class="auth-page">
 
-    <header class="dashboard-header">
-      <div class="header-left">
-        <div class="logo-area">
-          <span class="logo-icon">🐷</span>
-          <h1>Kässeli von <span id="userFirstNameDisplay">...</span></h1>
+    <div class="auth-card">
+      <div class="auth-logo-container">
+        <div class="auth-logo">
+          <span>🐷</span>
         </div>
-        <span id="userEmail" style="display:none;"></span><span id="userId" style="display:none;"></span>
       </div>
-      <div class="header-right">
-        <button id="logoutBtn" class="btn-logout">➔ Abmelden</button>
+
+      <h1 class="auth-title">Kässeli</h1>
+      <p class="auth-subtitle">Dein digitaler Sparmanager</p>
+
+      <div class="auth-tabs">
+        <a href="login.html" class="tab-btn inactive">
+          <span class="icon">➔</span> Login
+        </a>
+        <a href="register.html" class="tab-btn active">
+          <span class="icon">👤</span> Registrieren
+        </a>
       </div>
-    </header>
 
-    <main class="dashboard-container">
-      
-      <section class="metrics-grid">
-        <div class="card card-green">
-          <div class="card-icon-header"><span class="card-icon">💰</span> Gesamt gespart</div>
-          <div class="card-value" id="ui-total-amount">CHF 0.00</div>
-          <p class="card-subtext" id="ui-coin-count-top">0 Münzen eingeworfen</p>
+      <form id="registerForm">
+        
+        <div class="form-group">
+          <label for="first_name">Vorname</label>
+          <input type="text" id="first_name" placeholder="z.B. Max" required />
         </div>
 
-        <div class="card card-blue">
-          <div class="card-icon-header"><span class="card-icon">🎯</span> Sparziel</div>
-          <div class="card-value">
-            <span id="ui-goal-amount">CHF 0.00</span> 
-            <a href="#" id="btn-open-modal" class="inline-link">ändern</a>
-          </div>
-          <p class="card-subtext" id="ui-goal-title">Kein aktives Ziel</p>
-        </div>
-
-        <div class="card card-pink">
-          <div class="card-icon-header"><span class="card-icon">📈</span> Fortschritt</div>
-          <div class="progress-value-container">
-            <div class="card-value" id="ui-progress-text">0.0%</div>
-            <button id="zielErreichtBtn" class="btn-complete-goal" style="display: none;">🎉 Ziel abschliessen</button>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar" id="ui-progress-bar" style="width: 0%;"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card card-dark achievements-section">
-        <div class="achievements-header">
-          <div>
-            <h2>🎮 Achievements</h2>
-            <p>0 von 6 freigeschaltet</p>
-          </div>
-          <div class="achievements-badge">
-            <span class="badge-value">0%</span>
-            <span class="badge-label">Fortschritt</span>
-          </div>
+        <div class="form-group">
+          <label for="email">E-Mail</label>
+          <input type="email" id="email" placeholder="max@beispiel.de" required />
         </div>
         
-        <div class="progress-bar-container dark-track">
-          <div class="progress-bar pink-gradient" style="width: 0%;"></div>
-        </div>
-
-        <div class="achievements-grid">
-          <div class="achievement-item locked">
-            <span class="ach-icon">⭐</span>
-            <h3>Erste Münze</h3>
-            <p>Wirf deine erste Münze ein</p>
-            <div class="ach-progress">0 / 1</div>
-          </div>
-          <div class="achievement-item locked">
-            <span class="ach-icon">⚡</span>
-            <h3>Fleissiger Sparer</h3>
-            <p>Sammle 10 Münzen</p>
-            <div class="ach-progress">0 / 10</div>
-          </div>
-          <div class="achievement-item locked">
-            <span class="ach-icon">💎</span>
-            <h3>Guter Start</h3>
-            <p>25% des Ziels erreicht</p>
-            <div class="ach-progress">0.00 / 12.50 CHF</div>
-          </div>
-          <div class="achievement-item locked">
-            <span class="ach-icon">🚀</span>
-            <h3>Halbzeit</h3>
-            <p>50% des Ziels erreicht</p>
-            <div class="ach-progress">0.00 / 25.00 CHF</div>
-          </div>
-          <div class="achievement-item locked">
-            <span class="ach-icon">🏆</span>
-            <h3>Münzsammler</h3>
-            <p>Sammle 50 Münzen</p>
-            <div class="ach-progress">0 / 50</div>
-          </div>
-          <div class="achievement-item locked">
-            <span class="ach-icon">👑</span>
-            <h3>ZIEL ERREICHT!</h3>
-            <p>100% - Du hast es geschafft!</p>
-            <div class="ach-progress">0.00 / 50.00 CHF</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="content-grid">
-        <div class="card stats-card">
-          <div class="stats-header">
-            <span class="stats-icon">📊</span>
-            <h3>Statistiken</h3>
-          </div>
-          <div class="Statistiken">
-            <canvas id="coinChart" width="400" height="250"></canvas>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <div id="goalModal" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>🎯 Sparziel festlegen</h3>
-          <span id="btn-close-modal" class="modal-close-x">&times;</span>
+        <div class="form-group">
+          <label for="password">Passwort</label>
+          <input type="password" id="password" placeholder="••••••••" required />
         </div>
         
-        <form id="sparzielForm">
-          <div class="form-group">
-            <label for="titel">Was ist dein Sparziel?</label>
-            <input type="text" id="titel" placeholder="z.B. Neues Fahrrad, PlayStation 5" required />
-          </div>
-          
-          <div class="form-group">
-            <label for="zielBetrag">Zielbetrag (in CHF)</label>
-            <input type="number" id="zielBetrag" step="0.05" min="0.05" placeholder="z.B. 150.00" required />
-          </div>
-          
-          <div class="modal-actions">
-            <button type="submit" class="btn-primary">Ziel speichern</button>
-            <button type="button" id="btn-cancel-modal" class="btn-outline">Abbrechen</button>
-          </div>
-        </form>
-      </div>
+        <button type="submit" class="btn-primary">Registrieren</button>
+      </form>
     </div>
 
     <div class="help-badge">?</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script src="js/protected.js"></script>
-    <script src="js/logout.js"></script>
+    <script src="js/register.js"></script>
   </body>
 </html>
