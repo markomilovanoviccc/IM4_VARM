@@ -1,86 +1,176 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <title>Smartes Sparschwein</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Kässli von Ville</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
+  <body class="dashboard-page">
 
-  <body>
-    <h1>Smartes Sparschwein</h1>
+    <header class="dashboard-header">
+      <div class="header-left">
+        <div class="logo-area">
+          <span class="logo-icon">🐷</span>
+          <h1>Kässli von Ville</h1>
+        </div>
+        <p class="subtitle">Deine Sparfortschritte im Überblick (Hallo <span id="userFirstName"></span>!)</p>
+        <span id="userEmail" style="display:none;"></span><span id="userId" style="display:none;"></span>
+      </div>
+      <div class="header-right">
+        <button id="logoutBtn" class="btn-logout">➔ Abmelden</button>
+      </div>
+    </header>
 
-    <!-- Login-Bereich -->
-    <div id="protectedContent">
-      <h2>
-        Willkommen, <span id="userFirstName"></span>
-        (<span id="userEmail"></span>)!
-      </h2>
+    <main class="dashboard-container">
+      
+      <section class="metrics-grid">
+        <div class="card card-green">
+          <div class="card-icon-header">
+            <span class="card-icon">💰</span> Gesamt gespart
+          </div>
+          <div class="card-value">CHF 0.00</div>
+          <p class="card-subtext">0 Münzen eingeworfen</p>
+        </div>
 
-      <p>Deine User ID ist: <span id="userId"></span></p>
-    </div>
+        <div class="card card-blue">
+          <div class="card-icon-header">
+            <span class="card-icon">🎯</span> Sparziel
+          </div>
+          <div class="card-value">CHF 50.00 <a href="#" class="inline-link">ändern</a></div>
+          <p class="card-subtext">Noch CHF 50.00 bis zum Ziel</p>
+        </div>
 
-    <!-- Sparschwein-Bereich -->
-    <section>
-      <h2>Mein Sparschwein</h2>
+        <div class="card card-pink">
+          <div class="card-icon-header">
+            <span class="card-icon">📈</span> Fortschritt
+          </div>
+          <div class="card-value">0.0%</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
 
-      <p>
-        <strong>Geraete-ID:</strong>
-        <span id="geraeteIdAnzeige">SPAR001</span>
-      </p>
+      <section class="card card-dark achievements-section">
+        <div class="achievements-header">
+          <div>
+            <h2>🎮 Achievements</h2>
+            <p>0 von 6 freigeschaltet</p>
+          </div>
+          <div class="achievements-badge">
+            <span class="badge-value">0%</span>
+            <span class="badge-label">Fortschritt</span>
+          </div>
+        </div>
+        
+        <div class="progress-bar-container dark-track">
+          <div class="progress-bar pink-gradient" style="width: 0%;"></div>
+        </div>
 
-      <p>
-        <strong>Aktueller Bestand:</strong>
-        <span id="muenzbestand">Laedt...</span> Fr.
-      </p>
-    </section>
+        <div class="achievements-grid">
+          <div class="achievement-item locked">
+            <span class="ach-icon">⭐</span>
+            <h3>Erste Münze</h3>
+            <p>Wirf deine erste Münze ein</p>
+            <div class="ach-progress">0 / 1</div>
+          </div>
+          <div class="achievement-item locked">
+            <span class="ach-icon">⚡</span>
+            <h3>Fleißiger Sparer</h3>
+            <p>Sammle 10 Münzen</p>
+            <div class="ach-progress">0 / 10</div>
+          </div>
+          <div class="achievement-item locked">
+            <span class="ach-icon">💎</span>
+            <h3>Guter Start</h3>
+            <p>25% des Ziels erreicht</p>
+            <div class="ach-progress">0.00 / 12.50 CHF</div>
+          </div>
+          <div class="achievement-item locked">
+            <span class="ach-icon">🚀</span>
+            <h3>Halbzeit</h3>
+            <p>50% des Ziels erreicht</p>
+            <div class="ach-progress">0.00 / 25.00 CHF</div>
+          </div>
+          <div class="achievement-item locked">
+            <span class="ach-icon">🏆</span>
+            <h3>Münzsammler</h3>
+            <p>Sammle 50 Münzen</p>
+            <div class="ach-progress">0 / 50</div>
+          </div>
+          <div class="achievement-item locked">
+            <span class="ach-icon">👑</span>
+            <h3>ZIEL ERREICHT!</h3>
+            <p>100% - Du hast es geschafft!</p>
+            <div class="ach-progress">0.00 / 50.00 CHF</div>
+          </div>
+        </div>
+      </section>
 
-    <!-- Sparziel-Bereich -->
-    <section>
-      <h2>Sparziel</h2>
+      <section class="content-grid">
+        <div class="card card-yellow-border coin-status-card">
+          <div class="coin-header">
+            <div class="piggy-pink-icon">🐷</div>
+            <div>
+              <h3>In der Sparkasse</h3>
+              <p class="muted-label">Aktueller Münzstand</p>
+            </div>
+          </div>
+          
+          <div class="coin-display-box">
+            <p class="box-title">Schweizer Franken in Münzen</p>
+            <div class="coin-amount">
+              <span class="coin-graphic">🪙</span>
+              <span class="amount-number">0.00</span>
+              <span class="currency">CHF</span>
+            </div>
+            <p class="total-coins-count">0 Münzen total</p>
+          </div>
 
-      <form id="sparzielForm">
-        <input
-          type="text"
-          id="titel"
-          placeholder="Sparziel, z. B. Neue Kamera"
-          required
-        >
+          <div class="empty-coins-placeholder">
+            <div class="coin-image-mock">🇨🇭</div>
+            <h4>Noch keine Münzen drin!</h4>
+            <p>Wirf deine erste Münze ein.</p>
+          </div>
 
-        <input
-          type="number"
-          id="zielBetrag"
-          placeholder="Zielbetrag"
-          step="0.05"
-          required
-        >
+          <div class="info-box-blue">
+            💡 <strong>Info:</strong> Der Sensor erfasst automatisch jede eingeworfene Münze
+          </div>
+        </div>
 
-        <button type="submit">Sparziel speichern</button>
-      </form>
+        <div class="card stats-card">
+          <div class="stats-header">
+            <span class="stats-icon">📊</span>
+            <h3>Statistiken</h3>
+          </div>
+          <div class="stats-empty-state">
+            <p>Noch keine Münzen gescannt!</p>
+            <p class="sub-text">Scanne deine erste Münze, um Statistiken zu sehen.</p>
+          </div>
+        </div>
+      </section>
 
-      <p>
-        <strong>Ziel:</strong>
-        <span id="sparzielTitel">Noch kein Ziel</span>
-      </p>
+      <section class="card simulation-card">
+        <h3>🔧 Test-Bereich (Sensor-Simulation)</h3>
+        <p class="sim-subtitle">In der echten Sparkasse werden Münzen automatisch erkannt. Hier kannst du zum Testen manuell Münzen hinzufügen:</p>
+        
+        <div class="sim-buttons-grid">
+          <button class="btn-sim">5 Rp</button>
+          <button class="btn-sim">10 Rp</button>
+          <button class="btn-sim">20 Rp</button>
+          <button class="btn-sim">50 Rp</button>
+          <button class="btn-sim">1 Fr</button>
+          <button class="btn-sim">2 Fr</button>
+          <button class="btn-sim">5 Fr</button>
+        </div>
+      </section>
 
-      <p>
-        <strong>Zielbetrag:</strong>
-        <span id="sparzielBetrag">0.00</span> Fr.
-      </p>
+    </main>
 
-      <p>
-        <strong>Fortschritt:</strong>
-        <span id="fortschritt">0</span>%
-      </p>
-
-      <button id="zielErreichtBtn" style="display: none;">
-        Sparziel abschliessen
-      </button>
-    </section>
-
-    <button id="logoutBtn">Logout</button>
+    <div class="help-badge">?</div>
 
     <script src="js/protected.js"></script>
-    <script src="js/sparschwein.js"></script>
     <script src="js/logout.js"></script>
   </body>
 </html>
