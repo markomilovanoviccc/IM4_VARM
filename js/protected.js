@@ -161,3 +161,67 @@ window.addEventListener("load", () => {
   // Alle 10 Sekunden live aktualisieren für den Münzeinwurf
   setInterval(ladeDashboardDaten, 10000);
 });
+async function loadStatistics() {
+  try {
+    const response = await fetch("api/stats.php", {
+      credentials: "include", // Nimmt die Session-Cookies mit
+    });
+
+    if (response.status === 401) return; // User nicht eingeloggt
+
+    const result = await response.json();
+
+    if (result.status === "success") {
+      renderChart(result.labels, result.data);
+    } else {
+      console.error("Fehler beim Laden der Stats:", result.message);
+    }
+  } catch (error) {
+    console.error("Fetch-Fehler:", error);
+  }
+}
+
+function renderChart(labels, data) {
+  const ctx = document.getElementById('coinChart');
+  
+  // Falls das Canvas nicht existiert, breche ab
+  if (!ctx) return;
+
+  new Chart(ctx, {
+    type: 'bar', // Balkendiagramm
+    data: {
+      labels: labels, // z.B. ["1.00 CHF", "2.00 CHF", "5.00 CHF"]
+      datasets: [{
+        label: 'Anzahl Münzen',
+        data: data, // z.B. [29, 79, 19]
+        backgroundColor: '#00E676', // Das coole Grün aus deinem Dashboard!
+        borderRadius: 5 // Macht die Balken oben leicht rund
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1 // Nur ganze Zahlen bei der Anzahl
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false // Versteckt die Legende, da der Titel reicht
+        }
+      }
+    }
+  });
+}
+
+// Wenn die Seite lädt, prüfen wir den Login UND laden die Statistiken
+window.addEventListener("load", () => {
+  checkAuth().then(isLoggedIn => {
+    if (isLoggedIn) {
+      loadStatistics();
+    }
+  });
+});
