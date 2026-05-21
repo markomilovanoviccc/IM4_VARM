@@ -1,14 +1,11 @@
 // js/protected.js
 
-// Die ID des physischen Sparschweins (muss in deiner DB existieren!)
-const GERAETE_ID = "SPAR001"; 
+const GERAETE_ID = "SPAR001"; // Eure vordefinierte Geräte-ID aus der DB
 
-// 1. Authentifizierung prüfen (aus deiner originalen protected.js)
+// 1. Authentifizierung prüfen (aus eurem originalen Boilerplate)
 async function checkAuth() {
   try {
-    const response = await fetch("api/protected.php", {
-      credentials: "include",
-    });
+    const response = await fetch("api/protected.php", { credentials: "include" });
 
     if (response.status === 401) {
       window.location.href = "login.html";
@@ -16,13 +13,10 @@ async function checkAuth() {
     }
 
     const result = await response.json();
-
-    // Begrüssung im Header aktualisieren
     document.getElementById("userFirstName").textContent = result.first_name || '';
     
-    // Auth erfolgreich -> Lade jetzt die Sparschwein-Daten!
+    // Auth erfolgreich -> Daten laden
     ladeDashboardDaten();
-
     return true;
   } catch (error) {
     console.error("Auth check failed:", error);
@@ -31,10 +25,10 @@ async function checkAuth() {
   }
 }
 
-// 2. Daten von der API laden und ins neue UI einfügen
+// 2. Dashboard-Daten aus den PHP-APIs laden
 async function ladeDashboardDaten() {
   try {
-    // --- Sparziel laden ---
+    // --- 2a. Sparziel laden ---
     const goalResponse = await fetch(`api/sparziel.php?geraete_id=${GERAETE_ID}`);
     const goalData = await goalResponse.json();
 
@@ -42,13 +36,21 @@ async function ladeDashboardDaten() {
     const zielBetrag = parseFloat(goalData.ziel_betrag || 0).toFixed(2);
     const fortschritt = parseFloat(goalData.fortschritt || 0).toFixed(1);
 
-    // UI für Sparziel updaten
+    // UI für Sparziel-Werte updaten
     document.getElementById("ui-goal-amount").textContent = isGoalActive ? `CHF ${zielBetrag}` : "CHF 0.00";
-    document.getElementById("ui-goal-title").textContent = isGoalActive ? `Noch CHF ${zielBetrag} bis zum Ziel` : "Kein aktives Ziel";
+    document.getElementById("ui-goal-title").textContent = isGoalActive ? `Ziel: ${goalData.titel}` : "Kein aktives Ziel";
     document.getElementById("ui-progress-text").textContent = `${fortschritt}%`;
     document.getElementById("ui-progress-bar").style.width = `${fortschritt}%`;
 
-    // --- Münzbestand laden ---
+    // Visueller Abschliessen-Button: Nur bei aktivem Ziel und 100% Fortschritt anzeigen
+    const completeBtn = document.getElementById("zielErreichtBtn");
+    if (isGoalActive && fortschritt >= 100) {
+      completeBtn.style.display = "block";
+    } else {
+      completeBtn.style.display = "none";
+    }
+
+    // --- 2b. Münzbestand laden ---
     const coinResponse = await fetch(`api/muenzbestand.php?geraete_id=${GERAETE_ID}`);
     const coinData = await coinResponse.json();
 
@@ -60,39 +62,48 @@ async function ladeDashboardDaten() {
     }
     const gesamtBetrag = parseFloat(coinData.gesamtbetrag || 0).toFixed(2);
 
-    // UI für Münzbestand updaten
+    // UI für Münzstände updaten
     document.getElementById("ui-total-amount").textContent = `CHF ${gesamtBetrag}`;
     document.getElementById("ui-coin-count-top").textContent = `${totalCoins} Münzen eingeworfen`;
     document.getElementById("ui-piggy-amount").textContent = gesamtBetrag;
     document.getElementById("ui-piggy-coin-count").textContent = `${totalCoins} Münzen total`;
-
-    // --- Ziel-Erreicht-Logik prüfen ---
-    if (isGoalActive && fortschritt >= 100) {
-      setTimeout(() => {
-        if(confirm(`Glückwunsch! Du hast dein Ziel "${goalData.titel}" erreicht! Willst du es abschliessen und das Kässli leeren?`)) {
-          schliesseSparzielAb();
-        }
-      }, 500); // Kurze Verzögerung, damit die Animation zuerst fertig lädt
-    }
 
   } catch (error) {
     console.error("Fehler beim Laden der Dashboard-Daten:", error);
   }
 }
 
-// 3. Neues Sparziel erstellen (Event-Listener für den "ändern" Link)
+// 3. Modal-Steuerung & Event Listener initialisieren
 document.addEventListener("DOMContentLoaded", () => {
-  const changeGoalBtn = document.querySelector(".inline-link");
-  if (changeGoalBtn) {
-    changeGoalBtn.addEventListener("click", async (e) => {
+  const modal = document.getElementById("goalModal");
+  const openBtn = document.getElementById("btn-open-modal");
+  const closeX = document.getElementById("btn-close-modal");
+  const cancelBtn = document.getElementById("btn-cancel-modal");
+  const form = document.getElementById("sparzielForm");
+  const completeBtn = document.getElementById("zielErreichtBtn");
+
+  // Modal öffnen
+  if (openBtn) {
+    openBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      modal.style.display = "flex";
+    });
+  }
+
+  // Modal schliessen (X, Abbrechen oder Klick ausserhalb)
+  const closeModal = () => { modal.style.display = "none"; form.reset(); };
+  if (closeX) closeX.addEventListener("click", closeModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+  window.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+  // Neues Sparziel über das Formular speichern (Erfassen)
+  if (form) {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       
-      const titel = prompt("Wie heisst dein neues Sparziel? (z.B. Fahrrad)");
-      if (!titel) return;
-    
-      const betrag = prompt("Wie viel CHF möchtest du sparen? (z.B. 150)");
-      if (!betrag || isNaN(betrag)) return;
-    
+      const titel = document.getElementById("titel").value.trim();
+      const zielBetrag = document.getElementById("zielBetrag").value;
+
       try {
         const response = await fetch("api/sparziel_erstellen.php", {
           method: "POST",
@@ -100,14 +111,14 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             geraete_id: GERAETE_ID,
             titel: titel,
-            ziel_betrag: parseFloat(betrag)
+            ziel_betrag: parseFloat(zielBetrag)
           })
         });
-    
+
         const result = await response.json();
         if (result.status === "success") {
-          alert("Neues Sparziel gespeichert!");
-          ladeDashboardDaten(); // Dashboard sofort aktualisieren
+          closeModal();
+          ladeDashboardDaten();
         } else {
           alert("Fehler: " + result.message);
         }
@@ -116,35 +127,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Sparziel über den UI-Button abschliessen
+  if (completeBtn) {
+    completeBtn.addEventListener("click", async () => {
+      if (!confirm("Möchtest du dieses Sparziel wirklich abschliessen? Dein Münzbestand wird dabei zurückgesetzt.")) return;
+
+      try {
+        const response = await fetch("api/sparziel_abschliessen.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ geraete_id: GERAETE_ID })
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          alert("Ziel erfolgreich abgeschlossen! Das Kässli ist bereit für ein neues Ziel.");
+          ladeDashboardDaten();
+        } else {
+          alert("Fehler: " + result.message);
+        }
+      } catch (error) {
+        console.error("Fehler beim Abschliessen:", error);
+      }
+    });
+  }
 });
 
-// 4. Sparziel abschliessen
-async function schliesseSparzielAb() {
-  try {
-    const response = await fetch("api/sparziel_abschliessen.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ geraete_id: GERAETE_ID })
-    });
-
-    const result = await response.json();
-    if (result.status === "success") {
-      alert("Sparziel erfolgreich abgeschlossen! Dein Kässli ist jetzt wieder bereit für das nächste Ziel.");
-      ladeDashboardDaten(); // UI wieder auf 0 setzen
-    } else {
-      alert("Fehler: " + result.message);
-    }
-  } catch (error) {
-    console.error("Fehler beim Abschliessen:", error);
-  }
-}
-
-// Beim Laden der Seite die Authentifizierung starten
+// Automatischen Start triggern
 window.addEventListener("load", () => {
   checkAuth();
   
-  // Optional: Dashboard alle 10 Sekunden updaten (wie in deiner alten Datei)
-  setInterval(() => {
-    ladeDashboardDaten();
-  }, 10000);
+  // Alle 10 Sekunden live aktualisieren für den Münzeinwurf
+  setInterval(ladeDashboardDaten, 10000);
 });

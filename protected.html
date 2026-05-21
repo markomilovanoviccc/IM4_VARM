@@ -26,28 +26,28 @@
       
       <section class="metrics-grid">
         <div class="card card-green">
-          <div class="card-icon-header">
-            <span class="card-icon">💰</span> Gesamt gespart
-          </div>
-          <div class="card-value">CHF 0.00</div>
-          <p class="card-subtext">0 Münzen eingeworfen</p>
+          <div class="card-icon-header"><span class="card-icon">💰</span> Gesamt gespart</div>
+          <div class="card-value" id="ui-total-amount">CHF 0.00</div>
+          <p class="card-subtext" id="ui-coin-count-top">0 Münzen eingeworfen</p>
         </div>
 
         <div class="card card-blue">
-          <div class="card-icon-header">
-            <span class="card-icon">🎯</span> Sparziel
+          <div class="card-icon-header"><span class="card-icon">🎯</span> Sparziel</div>
+          <div class="card-value">
+            <span id="ui-goal-amount">CHF 0.00</span> 
+            <a href="#" id="btn-open-modal" class="inline-link">ändern</a>
           </div>
-          <div class="card-value">CHF 50.00 <a href="#" class="inline-link">ändern</a></div>
-          <p class="card-subtext">Noch CHF 50.00 bis zum Ziel</p>
+          <p class="card-subtext" id="ui-goal-title">Kein aktives Ziel</p>
         </div>
 
         <div class="card card-pink">
-          <div class="card-icon-header">
-            <span class="card-icon">📈</span> Fortschritt
+          <div class="card-icon-header"><span class="card-icon">📈</span> Fortschritt</div>
+          <div class="progress-value-container">
+            <div class="card-value" id="ui-progress-text">0.0%</div>
+            <button id="zielErreichtBtn" class="btn-complete-goal" style="display: none;">🎉 Ziel abschliessen</button>
           </div>
-          <div class="card-value">0.0%</div>
           <div class="progress-bar-container">
-            <div class="progress-bar" style="width: 0%;"></div>
+            <div class="progress-bar" id="ui-progress-bar" style="width: 0%;"></div>
           </div>
         </div>
       </section>
@@ -122,10 +122,10 @@
             <p class="box-title">Schweizer Franken in Münzen</p>
             <div class="coin-amount">
               <span class="coin-graphic">🪙</span>
-              <span class="amount-number">0.00</span>
+              <span class="amount-number" id="ui-piggy-amount">0.00</span>
               <span class="currency">CHF</span>
             </div>
-            <p class="total-coins-count">0 Münzen total</p>
+            <p class="total-coins-count" id="ui-piggy-coin-count">0 Münzen total</p>
           </div>
 
           <div class="empty-coins-placeholder">
@@ -150,8 +150,33 @@
           </div>
         </div>
       </section>
-
     </main>
+
+    <div id="goalModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🎯 Sparziel festlegen</h3>
+          <span id="btn-close-modal" class="modal-close-x">&times;</span>
+        </div>
+        
+        <form id="sparzielForm">
+          <div class="form-group">
+            <label for="titel">Was ist dein Sparziel?</label>
+            <input type="text" id="titel" placeholder="z.B. Neues Fahrrad, PlayStation 5" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="zielBetrag">Zielbetrag (in CHF)</label>
+            <input type="number" id="zielBetrag" step="0.05" min="0.05" placeholder="z.B. 150.00" required />
+          </div>
+          
+          <div class="modal-actions">
+            <button type="submit" class="btn-primary">Ziel speichern</button>
+            <button type="button" id="btn-cancel-modal" class="btn-outline">Abbrechen</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div class="help-badge">?</div>
 
