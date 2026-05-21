@@ -412,6 +412,8 @@ body.dashboard-page {
   font-size: 14px;
   text-decoration: underline;
   margin-left: 10px;
+  color: #ffffff;
+  cursor: pointer;
 }
 
 .card-subtext {
