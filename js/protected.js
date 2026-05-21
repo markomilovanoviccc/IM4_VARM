@@ -63,8 +63,6 @@ async function ladeDashboardDaten() {
 
     document.getElementById("ui-total-amount").textContent = `CHF ${gesamtBetrag}`;
     document.getElementById("ui-coin-count-top").textContent = `${totalCoins} Münzen eingeworfen`;
-    document.getElementById("ui-piggy-amount").textContent = gesamtBetrag;
-    document.getElementById("ui-piggy-coin-count").textContent = `${totalCoins} Münzen total`;
 
     // --- 2c. Chart aktualisieren ---
     await loadStatistics();
@@ -248,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const result = await response.json();
         if (result.status === "success") {
-          alert("Ziel erfolgreich abgeschlossen! Sparschwein öffnet sich..."); // <-- HIER IST DIE ÄNDERUNG
+          alert("Ziel erfolgreich abgeschlossen! Sparschwein öffnet sich...");
           ladeDashboardDaten();
         } else {
           alert("Fehler: " + result.message);
