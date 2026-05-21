@@ -15,6 +15,17 @@ async function checkAuth() {
 
     const result = await response.json();
     
+    // --- NEU: Vornamen auslesen und ins HTML schreiben ---
+    // Falls kein Vorname vorhanden ist, nutzen wir als Fallback "Dir" (Kässeli von Dir)
+    const firstName = result.first_name || "Dir"; 
+    
+    // Name in die Hauptüberschrift einfügen
+    document.getElementById("userFirstNameDisplay").textContent = firstName;
+    
+    // Optional: Auch den Namen im Browser-Tab (title) anpassen
+    document.title = `Dashboard - Kässeli von ${firstName}`;
+    // ------------------------------------------------------
+
     // Auth erfolgreich -> Daten laden
     ladeDashboardDaten();
     return true;
