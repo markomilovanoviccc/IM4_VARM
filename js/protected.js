@@ -1,8 +1,9 @@
 // js/protected.js
 
 const GERAETE_ID = "SPAR001"; // Eure vordefinierte Geräte-ID aus der DB
+let myChart = null; // Globale Variable für das Chart
 
-// 1. Authentifizierung prüfen (aus eurem originalen Boilerplate)
+// 1. Authentifizierung prüfen
 async function checkAuth() {
   try {
     const response = await fetch("api/protected.php", { credentials: "include" });
@@ -36,13 +37,11 @@ async function ladeDashboardDaten() {
     const zielBetrag = parseFloat(goalData.ziel_betrag || 0).toFixed(2);
     const fortschritt = parseFloat(goalData.fortschritt || 0).toFixed(1);
 
-    // UI für Sparziel-Werte updaten
     document.getElementById("ui-goal-amount").textContent = isGoalActive ? `CHF ${zielBetrag}` : "CHF 0.00";
     document.getElementById("ui-goal-title").textContent = isGoalActive ? `Ziel: ${goalData.titel}` : "Kein aktives Ziel";
     document.getElementById("ui-progress-text").textContent = `${fortschritt}%`;
     document.getElementById("ui-progress-bar").style.width = `${fortschritt}%`;
 
-    // Visueller Abschliessen-Button: Nur bei aktivem Ziel und 100% Fortschritt anzeigen
     const completeBtn = document.getElementById("zielErreichtBtn");
     if (isGoalActive && fortschritt >= 100) {
       completeBtn.style.display = "block";
@@ -62,112 +61,27 @@ async function ladeDashboardDaten() {
     }
     const gesamtBetrag = parseFloat(coinData.gesamtbetrag || 0).toFixed(2);
 
-    // UI für Münzstände updaten
     document.getElementById("ui-total-amount").textContent = `CHF ${gesamtBetrag}`;
     document.getElementById("ui-coin-count-top").textContent = `${totalCoins} Münzen eingeworfen`;
     document.getElementById("ui-piggy-amount").textContent = gesamtBetrag;
     document.getElementById("ui-piggy-coin-count").textContent = `${totalCoins} Münzen total`;
+
+    // --- 2c. Chart aktualisieren ---
+    await loadStatistics();
 
   } catch (error) {
     console.error("Fehler beim Laden der Dashboard-Daten:", error);
   }
 }
 
-// 3. Modal-Steuerung & Event Listener initialisieren
-document.addEventListener("DOMContentLoaded", () => {
-  const modal = document.getElementById("goalModal");
-  const openBtn = document.getElementById("btn-open-modal");
-  const closeX = document.getElementById("btn-close-modal");
-  const cancelBtn = document.getElementById("btn-cancel-modal");
-  const form = document.getElementById("sparzielForm");
-  const completeBtn = document.getElementById("zielErreichtBtn");
-
-  // Modal öffnen
-  if (openBtn) {
-    openBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      modal.style.display = "flex";
-    });
-  }
-
-  // Modal schliessen (X, Abbrechen oder Klick ausserhalb)
-  const closeModal = () => { modal.style.display = "none"; form.reset(); };
-  if (closeX) closeX.addEventListener("click", closeModal);
-  if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
-  window.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
-
-  // Neues Sparziel über das Formular speichern (Erfassen)
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      
-      const titel = document.getElementById("titel").value.trim();
-      const zielBetrag = document.getElementById("zielBetrag").value;
-
-      try {
-        const response = await fetch("api/sparziel_erstellen.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            geraete_id: GERAETE_ID,
-            titel: titel,
-            ziel_betrag: parseFloat(zielBetrag)
-          })
-        });
-
-        const result = await response.json();
-        if (result.status === "success") {
-          closeModal();
-          ladeDashboardDaten();
-        } else {
-          alert("Fehler: " + result.message);
-        }
-      } catch (error) {
-        console.error("Fehler beim Erstellen des Sparziels:", error);
-      }
-    });
-  }
-
-  // Sparziel über den UI-Button abschliessen
-  if (completeBtn) {
-    completeBtn.addEventListener("click", async () => {
-      if (!confirm("Möchtest du dieses Sparziel wirklich abschliessen? Dein Münzbestand wird dabei zurückgesetzt.")) return;
-
-      try {
-        const response = await fetch("api/sparziel_abschliessen.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ geraete_id: GERAETE_ID })
-        });
-
-        const result = await response.json();
-        if (result.status === "success") {
-          alert("Ziel erfolgreich abgeschlossen! Das Kässli ist bereit für ein neues Ziel.");
-          ladeDashboardDaten();
-        } else {
-          alert("Fehler: " + result.message);
-        }
-      } catch (error) {
-        console.error("Fehler beim Abschliessen:", error);
-      }
-    });
-  }
-});
-
-// Automatischen Start triggern
-window.addEventListener("load", () => {
-  checkAuth();
-  
-  // Alle 10 Sekunden live aktualisieren für den Münzeinwurf
-  setInterval(ladeDashboardDaten, 10000);
-});
+// --- 2c. Statistiken für Chart laden ---
 async function loadStatistics() {
   try {
-    const response = await fetch("api/stats.php", {
-      credentials: "include", // Nimmt die Session-Cookies mit
+    const response = await fetch(`api/stats.php?geraete_id=${GERAETE_ID}`, {
+      credentials: "include", 
     });
 
-    if (response.status === 401) return; // User nicht eingeloggt
+    if (response.status === 401) return;
 
     const result = await response.json();
 
@@ -177,25 +91,28 @@ async function loadStatistics() {
       console.error("Fehler beim Laden der Stats:", result.message);
     }
   } catch (error) {
-    console.error("Fetch-Fehler:", error);
+    console.error("Fetch-Fehler Chart:", error);
   }
 }
 
 function renderChart(labels, data) {
   const ctx = document.getElementById('coinChart');
-  
-  // Falls das Canvas nicht existiert, breche ab
   if (!ctx) return;
 
-  new Chart(ctx, {
-    type: 'bar', // Balkendiagramm
+  // WICHTIG: Altes Chart zerstören, bevor ein neues drüber gezeichnet wird
+  if (myChart !== null) {
+      myChart.destroy();
+  }
+
+  myChart = new Chart(ctx, {
+    type: 'bar', 
     data: {
-      labels: labels, // z.B. ["1.00 CHF", "2.00 CHF", "5.00 CHF"]
+      labels: labels, 
       datasets: [{
         label: 'Anzahl Münzen',
-        data: data, // z.B. [29, 79, 19]
-        backgroundColor: '#00E676', // Das coole Grün aus deinem Dashboard!
-        borderRadius: 5 // Macht die Balken oben leicht rund
+        data: data, 
+        backgroundColor: '#00E676', 
+        borderRadius: 5 
       }]
     },
     options: {
@@ -203,25 +120,78 @@ function renderChart(labels, data) {
       scales: {
         y: {
           beginAtZero: true,
-          ticks: {
-            stepSize: 1 // Nur ganze Zahlen bei der Anzahl
-          }
+          ticks: { stepSize: 1 }
         }
       },
-      plugins: {
-        legend: {
-          display: false // Versteckt die Legende, da der Titel reicht
-        }
-      }
+      plugins: { legend: { display: false } }
     }
   });
 }
 
-// Wenn die Seite lädt, prüfen wir den Login UND laden die Statistiken
+// 3. Modal-Steuerung & Event Listener
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("goalModal");
+  const openBtn = document.getElementById("btn-open-modal");
+  const closeX = document.getElementById("btn-close-modal");
+  const cancelBtn = document.getElementById("btn-cancel-modal");
+  const form = document.getElementById("sparzielForm");
+  const completeBtn = document.getElementById("zielErreichtBtn");
+
+  if (openBtn) openBtn.addEventListener("click", (e) => { e.preventDefault(); modal.style.display = "flex"; });
+  
+  const closeModal = () => { modal.style.display = "none"; if(form) form.reset(); };
+  if (closeX) closeX.addEventListener("click", closeModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+  window.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const titel = document.getElementById("titel").value.trim();
+      const zielBetrag = document.getElementById("zielBetrag").value;
+
+      try {
+        const response = await fetch("api/sparziel_erstellen.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ geraete_id: GERAETE_ID, titel: titel, ziel_betrag: parseFloat(zielBetrag) })
+        });
+        const result = await response.json();
+        if (result.status === "success") {
+          closeModal();
+          ladeDashboardDaten();
+        } else {
+          alert("Fehler: " + result.message);
+        }
+      } catch (error) { console.error("Fehler:", error); }
+    });
+  }
+
+  if (completeBtn) {
+    completeBtn.addEventListener("click", async () => {
+      if (!confirm("Möchtest du dieses Sparziel wirklich abschliessen?")) return;
+      try {
+        const response = await fetch("api/sparziel_abschliessen.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ geraete_id: GERAETE_ID })
+        });
+        const result = await response.json();
+        if (result.status === "success") {
+          alert("Ziel erfolgreich abgeschlossen!");
+          ladeDashboardDaten();
+        } else {
+          alert("Fehler: " + result.message);
+        }
+      } catch (error) { console.error("Fehler:", error); }
+    });
+  }
+});
+
+// Automatischen Start triggern (nur noch EIN Load-Event!)
 window.addEventListener("load", () => {
-  checkAuth().then(isLoggedIn => {
-    if (isLoggedIn) {
-      loadStatistics();
-    }
-  });
+  checkAuth();
+  
+  // Alle 10 Sekunden live aktualisieren (aktualisiert jetzt auch das Chart!)
+  setInterval(ladeDashboardDaten, 10000);
 });
