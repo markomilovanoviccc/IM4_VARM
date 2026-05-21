@@ -95,7 +95,7 @@ a:hover {
 /* Für den Bereich unten (Statistiken) */
 .content-grid {
   display: grid;
-  grid-template-columns: 1fr; /* Da die gelbe Box weg ist, nimmt die Statistik-Box jetzt 100% ein */
+  grid-template-columns: 1fr; 
   gap: 20px;
   margin-bottom: 30px;
   max-width: 1200px;
@@ -371,11 +371,6 @@ body.dashboard-page {
   font-size: 28px;
   color: #ee45d2;
   margin-bottom: 0;
-}
-
-.dashboard-header .subtitle {
-  color: var(--text-muted);
-  font-size: 14px;
 }
 
 .btn-logout {

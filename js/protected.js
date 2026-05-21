@@ -14,7 +14,6 @@ async function checkAuth() {
     }
 
     const result = await response.json();
-    document.getElementById("userFirstName").textContent = result.first_name || '';
     
     // Auth erfolgreich -> Daten laden
     ladeDashboardDaten();
