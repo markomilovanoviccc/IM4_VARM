@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const result = await response.json();
         if (result.status === "success") {
-          alert("Ziel erfolgreich abgeschlossen!");
+          alert("Ziel erfolgreich abgeschlossen! Sparschwein öffnet sich..."); // <-- HIER IST DIE ÄNDERUNG
           ladeDashboardDaten();
         } else {
           alert("Fehler: " + result.message);
