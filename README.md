@@ -2,9 +2,9 @@
 
 * **Modul:** Interaktive Medien 4 an der Fachhochschule Graubünden (FS26)  
 * **Themenfeld:** IoT-Applikation zum Thema Eltern mit kleinen Kindern  
-* **Name des Projekts:** \[*Kässeli*\]   
-* **Team Physical Computing:** \[*Rabia Pakmak & Andrin Zünd*\]   
-* **Team WebApp:** \[*Marko Milovanovic & Ville Lindskog*\]
+* **Name des Projekts:** \*Sparkässeli*\   
+* **Team Physical Computing:** \*Rabia Pakmak & Andrin Zünd*\  
+* **Team WebApp:** \*Marko Milovanovic & Ville Lindskog*\
  
  
 * Welches Problem im Alltag von Eltern mit kleinen Kindern wird gelöst?
