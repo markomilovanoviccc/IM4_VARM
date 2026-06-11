@@ -2,26 +2,22 @@
 
 * **Modul:** Interaktive Medien 4 an der Fachhochschule Graubünden (FS26)  
 * **Themenfeld:** IoT-Applikation zum Thema Eltern mit kleinen Kindern  
-* **Name des Projekts:** \*Sparkässeli*\   
+* **Name des Projekts:** \*Kässeli*\   
 * **Team Physical Computing:** \*Rabia Pakmak & Andrin Zünd*\  
 * **Team WebApp:** \*Marko Milovanovic & Ville Lindskog*\
  
  
 * Welches Problem im Alltag von Eltern mit kleinen Kindern wird gelöst?
-* Das ständige Mitzählen entfällt: Bei klassischen Sparschweinen verliert man schnell den Überblick. Eltern und Kinder müssen das Schwein nicht mehr mühsam ausschütten und Geld zählen, um zu wissen, ob es für den nächsten Wunsch reicht.
+* In einer zunehmend bargeldlosen Gesellschaft wird es für Eltern schwieriger, Kindern den Wert von Geld beizubringen. Unser Smarte Sparschwein löst dieses Problem: Es bewahrt das wichtige haptische Erlebnis des physischen Münzeinwurfs, verknüpft es aber mit einer zeitgemässen, digitalen Übersicht.
+Bei klassischen Sparschweinen verliert man schnell den Überblick. Eltern und Kinder müssen das Schwein nicht mehr mühsam ausschütten und Geld zählen, um zu wissen, ob es für den nächsten Wunsch reicht.
+Kinder verlieren oft die Motivation am Sparen, wenn der Fortschritt unsichtbar im Bauch des Sparschweins verborgen bleibt. Unser System macht den Erfolg in Echtzeit sichtbar.
 
-Greifbarkeit in einer digitalen Welt: In einer zunehmend bargeldlosen Gesellschaft wird es für Eltern schwieriger, Kindern den Wert von Geld beizubringen. Das Smarte Sparschwein löst dieses Problem: Es bewahrt das wichtige haptische Erlebnis des physischen Münzeinwurfs, verknüpft es aber mit einer zeitgemäßen, digitalen Übersicht.
-
-Fehlender Bezug zum Fortschritt: Kinder verlieren oft die Motivation am Sparen, wenn der Fortschritt unsichtbar im Bauch des Sparschweins verborgen bleibt. Unser System macht den Erfolg in Echtzeit sichtbar.
-
-* Was ist der „Sinn und Zweck“ des Systems?
+* Was ist der «Sinn und Zweck» des Systems?
 * Der Hauptzweck des Smarten Sparschweins liegt in der spielerischen und hybriden (Hardware + Web-App) finanziellen Früherziehung (Financial Literacy) für Kinder.
+Über die Web-App können Kinder konkrete Sparziele definieren (z. B. ein neues Fahrrad oder ein Lego-Set). Das System berechnet automatisch den Fortschritt bis zum Zielbetrag und zeigt visuell an, wann das Ziel erreicht ist (sparziel-Tabelle).
+Durch die lückenlose Aufzeichnung (einwurf_historie) und die exakte Kategorisierung der Münzarten (muenzbestand) entstehen spannende Statistiken. Kinder lernen, wie sich ihr Erspartes zusammensetzt und dass auch kleine Münzen über die Zeit zu einem grossen Betrag anwachsen.
 
-    Motivation durch konkrete Ziele: Über die Web-App können Kinder konkrete Sparziele definieren (z. B. ein neues Fahrrad oder ein Lego-Set). Das System berechnet automatisch den Fortschritt bis zum Zielbetrag und zeigt visuell an, wann das Ziel erreicht ist (sparziel-Tabelle).
-
-    Transparenz und Auswertung: Durch die lückenlose Aufzeichnung (einwurf_historie) und die exakte Kategorisierung der Münzarten (muenzbestand) entstehen spannende Statistiken. Kinder lernen, wie sich ihr Erspartes zusammensetzt und dass auch kleine Münzen über die Zeit zu einem großen Betrag anwachsen.
-
-    Eigenverantwortung: Durch die Verknüpfung von Benutzerprofilen (users) mit spezifischen Geräten (sparschwein) bekommt jedes Kind seinen eigenen, geschützten Bereich. Es lernt, Verantwortung für die eigenen Finanzen zu übernehmen, während die Eltern unterstützend auf die Auswertungen zugreifen können.
+Durch die Verknüpfung von Benutzerprofilen (users) mit spezifischen Geräten (sparschwein) bekommt jedes Kind seinen eigenen, geschützten Bereich. Es lernt, Verantwortung für die eigenen Finanzen zu übernehmen, während die Eltern unterstützend auf die Auswertungen zugreifen können.
 
 \[*Bilder / GIFs (optional)*\]
 
@@ -33,11 +29,12 @@ Fehlender Bezug zum Fortschritt: Kinder verlieren oft die Motivation am Sparen, 
 * **User Flow \+ Screen Flow** (Screenshot aus Figma)  
 * ggf. weitere Ergänzungen
 * *Welche Features waren angedacht?*
+Wir hatten anfangs die Idee, dass das Sparschwein alle Münzen zählen kann (auch 5 Räppler).
 * *Welche Features wurden nicht umgesetzt? (Warum)*
-
+Das Sparschwein wäre viel zu gross geworden und hätte zu viele Sensoren gebraucht.
 ### Setup
 
-* **WebApp:** [Link zur Website](http://link.zur.website)  
+* **WebApp:** [Link zur Website]( https://im4-varm.villelindskog.ch/login.html)  
 * **Video-Dokumentation:** [Link zum Video auf Youtube](http://link.zum.video) 
 
 #### Installationsanleitung WebApp
