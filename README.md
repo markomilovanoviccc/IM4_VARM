@@ -81,7 +81,7 @@ ardware-Code: Trage im Skript deines Mikrocontrollers deine WLAN-Daten, eine ein
   * *die verbundenen Sensoren und Aktoren*  
   * *die Programme (mit Dateinamen)*  
   * *die Kommunikationswege* 
-  ```mermaid
+```mermaid
 flowchart TD
     A([Münze wird eingeworfen]) --> B[Lichtschranke erkennt Münze]
     B --> C{Münze erkannt?}
@@ -135,7 +135,6 @@ flowchart TD
     AF --> AC
     AF --> AD
 ```
-
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
 * *ggf. **Bildmaterial***
