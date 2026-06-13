@@ -91,49 +91,35 @@ flowchart TD
 
     C -->|Ja| E[ESP32-C6 verarbeitet Einwurf]
 
-    E --> F[Servo bewegt sich]
-    E --> G[NeoPixel-LED-Ring wird aktualisiert]
-    E --> H[Status-LEDs geben Feedback]
+    E --> F[ESP32-C6 sendet Einwurf über WLAN / HTTP]
+    F --> G[api/einwurf.php]
+    G --> H[(Datenbank speichert Einwurf)]
 
-    E --> I[ESP32-C6 sendet Einwurf über WLAN / HTTP]
-    I --> J[api/einwurf.php]
-    J --> K[(Datenbank)]
+    H --> I[api/muenzbestand.php]
+    I --> J[ESP32-C6 fragt aktuellen Münzbestand ab]
+    J --> K[OLED-Display zeigt aktuellen Betrag an]
 
-    K --> L[api/muenzbestand.php]
-    L --> M[ESP32-C6 fragt aktuellen Münzbestand ab]
-    M --> N[OLED-Display zeigt aktuellen Betrag an]
+    J --> L[NeoPixel-LED-Ring zeigt Sparfortschritt]
+    J --> M[Status-LEDs geben Feedback]
 
-    K --> O[api/stats.php]
-    O --> P[js/sparschwein.js]
-    P --> Q[protected.html zeigt Sparstand und Statistik]
+    J --> N{Sparziel erreicht?}
 
-    R[index.html] --> S[js/auth.js]
-    S --> T[api/protected.php]
+    N -->|Nein| D
 
-    U[login.html] --> V[js/login.js]
-    V --> W[api/login.php]
-    W --> K
+    N -->|Ja| O[Ziel erreicht wird angezeigt]
+    O --> P[api/sparziel_abschliessen.php]
+    P --> Q[Datenbank schliesst Sparziel ab]
+    Q --> R[ESP32-C6 erhält Freigabe]
+    R --> S[Servo öffnet Sparkässeli]
 
-    X[js/logout.js] --> Y[api/logout.php]
+    T[C++ Code auf ESP32-C6] --> E
+    T --> J
+    T --> S
 
-    Z[js/register.js] --> AA[api/register.php]
-    AA --> K
-
-    AB[api/sparziel.php] --> K
-    AC[api/sparziel_erstellen.php] --> K
-    AD[api/sparziel_abschliessen.php] --> K
-
-    AE[C++ Code auf ESP32-C6] --> E
-    AF[system/config.php.blank] --> J
-    AF --> L
-    AF --> O
-    AF --> T
-    AF --> W
-    AF --> Y
-    AF --> AA
-    AF --> AB
-    AF --> AC
-    AF --> AD
+    U[api/einwurf.php] --> H
+    V[api/muenzbestand.php] --> J
+    W[api/sparziel.php] --> N
+    X[api/sparziel_abschliessen.php] --> Q
 ```
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
