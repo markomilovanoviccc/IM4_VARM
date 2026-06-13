@@ -79,7 +79,72 @@ ardware-Code: Trage im Skript deines Mikrocontrollers deine WLAN-Daten, eine ein
 * *ergänze: **Komponentenplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): Schaubild enthält*  
   * *die eingesetzten Komponenten*  
   * *die verbundenen Sensoren und Aktoren*  
-  * *die Programme (mit Dateinamen)*  
+  ##### Verbundene Sensoren und Aktoren
+
+Im Physical-Computing-Teil sind mehrere Sensoren und Aktoren mit dem ESP32-C6 verbunden. Die Sensoren erfassen Eingaben von aussen, zum Beispiel einen Münzeinwurf. Die Aktoren geben eine Reaktion aus, zum Beispiel über Licht, Display oder Bewegung.
+
+| Bauteil           | Art              | Aufgabe                                                                     |
+| ----------------- | ---------------- | --------------------------------------------------------------------------- |
+| Lichtschranke 1   | Sensor           | Erkennt einen Münzeinwurf.                                                  |
+| Lichtschranke 2   | Sensor           | Erkennt einen Münzeinwurf.                                                  |
+| Lichtschranke 3   | Sensor           | Erkennt einen Münzeinwurf.                                                  |
+| Schalter          | Eingabe / Sensor | Für das Zurücksetzen der WLAN-Verbindung. (Für die Vorschau für WLan-Setup) |
+| OLED-Display      | Ausgabe          | Zeigt den aktuellen Betrag, WLAN-Informationen und Statusmeldungen an.      |
+| NeoPixel-LED-Ring | Aktor / Ausgabe  | Zeigt den Fortschritt des Sparziels visuell an.                             |
+| Status-LEDs       | Aktor / Ausgabe  | Geben zusätzliches Feedback zum Zustand des Sparkässelis.                   |
+| Servo             | Aktor            | Schliesst oder öffnet das Sparkässeli.                                      |
+
+Die Lichtschranken sind die wichtigsten Sensoren im Projekt. Sie erkennen, wenn eine Münze eingeworfen wird, und geben ein Signal an den ESP32-C6 weiter. Der ESP32 verarbeitet dieses Signal im Code `computing/sparkaesseli.ino`.
+
+Nach einem erkannten Münzeinwurf reagieren mehrere Ausgabekomponenten. Das OLED-Display zeigt den aktuellen Münzbestand an. Der NeoPixel-LED-Ring visualisiert den Fortschritt zum Sparziel. Die Status-LEDs geben zusätzliches Feedback. Der Servo wird verwendet, um das Sparkässeli mechanisch zu öffnen oder zu schliessen.
+
+Wichtig ist, dass alle Sensoren und Aktoren eine gemeinsame GND-Verbindung mit dem ESP32-C6 haben. Dadurch können die Signale zuverlässig gelesen und die Aktoren korrekt gesteuert werden.
+
+  * *die Programme (mit Dateinamen)* 
+  ##### Programme und Bibliotheken für den ESP32-C6
+
+Der ESP32-C6 wurde mit der **Arduino IDE** programmiert. Die Arduino IDE wurde verwendet, um den Code zu schreiben, das richtige Board auszuwählen und den Code auf den Mikrocontroller hochzuladen.
+
+Der eigentliche Code für den Physical-Computing-Teil befindet sich im Repository unter:
+
+```text
+computing/sparkaesseli.ino
+```
+
+Die Datei `sparkaesseli.ino` ist ein Arduino-Sketch. Der Code basiert auf C++ beziehungsweise Arduino-C++. In dieser Datei werden die Lichtschranken ausgelesen, das OLED-Display, der NeoPixel-LED-Ring, die Status-LEDs und der Servo gesteuert. Zusätzlich verbindet sich der ESP32-C6 über WLAN mit der WebApp und kommuniziert mit der PHP-API.
+
+Für das Projekt wurde in der Arduino IDE folgendes Board verwendet:
+
+| Installation                        | Version | Aufgabe                                                                                                       |
+| ----------------------------------- | ------: | ------------------------------------------------------------------------------------------------------------- |
+| `esp32` by Espressif Systems        |   3.3.8 | Boardpaket für ESP32-Boards. Dadurch kann der ESP32-C6 in der Arduino IDE ausgewählt und programmiert werden. |
+| Board-Auswahl: `ESP32C6 Dev Module` |         | Verwendetes Board für den Upload auf den ESP32-C6.                                                            |
+
+Zusätzlich wurden folgende Bibliotheken installiert:
+
+| Bibliothek             | Version | Aufgabe im Projekt                                                                                                                                        |
+| ---------------------- | ------: | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Adafruit BusIO`       |  1.17.4 | Unterstützt die Kommunikation über I2C und SPI. Wird unter anderem von den Adafruit-Display-Bibliotheken benötigt.                                        |
+| `Adafruit GFX Library` |  1.12.6 | Grundbibliothek für grafische Ausgaben auf dem OLED-Display.                                                                                              |
+| `Adafruit NeoPixel`    |  1.15.5 | Steuert den NeoPixel-LED-Ring.                                                                                                                            |
+| `Adafruit SSD1306`     |  2.5.16 | Steuert das OLED-Display mit SSD1306-Chip.                                                                                                                |
+| `ESP32Servo`           |   3.2.0 | Steuert den Servo, der das Sparkässeli öffnet oder schliesst.                                                                                             |
+| `WiFiManager`          |  2.0.17 | Erstellt ein Setup-WLAN, wenn noch keine WLAN-Daten gespeichert sind. Dadurch kann das Sparkässeli ohne fest eingetragene WLAN-Daten eingerichtet werden. |
+
+Einige Bibliotheken wie `WiFi.h`, `HTTPClient.h` und `Wire.h` gehören zum ESP32-Boardpaket oder zur Arduino-Umgebung und mussten nicht separat über den Bibliotheksverwalter installiert werden.
+
+| Bibliothek     | Aufgabe im Code                                                                 |
+| -------------- | ------------------------------------------------------------------------------- |
+| `WiFi.h`       | Verbindet den ESP32-C6 mit dem WLAN.                                            |
+| `HTTPClient.h` | Sendet HTTP-Anfragen vom ESP32-C6 an die WebApp beziehungsweise an die PHP-API. |
+| `Wire.h`       | Ermöglicht die I2C-Kommunikation mit dem OLED-Display.                          |
+
+Im Code `computing/sparkaesseli.ino` werden zuerst die benötigten Bibliotheken eingebunden und die Pins für Sensoren, Display, LED-Ring, Servo und LEDs definiert. Danach wird die WLAN-Verbindung aufgebaut. Wenn noch keine WLAN-Daten gespeichert sind, öffnet WiFiManager ein Setup-WLAN. Über dieses Setup kann das Sparkässeli mit einem WLAN verbunden werden.
+
+Im Betrieb wartet der ESP32-C6 auf Signale der Lichtschranken. Wenn eine Münze erkannt wird, sendet der ESP32 den Einwurf über WLAN an die PHP-API. Danach fragt er den aktuellen Münzbestand und das aktive Sparziel ab. Diese Daten kommen aus der Datenbank, werden aber vom ESP32 verarbeitet. Das OLED-Display zeigt den aktuellen Betrag an und der LED-Ring visualisiert den Fortschritt.
+
+Das OLED-Display liest also nicht selbst aus der Datenbank. Es ist direkt mit dem ESP32-C6 verbunden und zeigt nur die Daten an, die der ESP32 über die API erhält. Der Servo wird ebenfalls vom ESP32 gesteuert. Wenn ein neues Sparziel erstellt wird, schliesst der Servo das Sparkässeli. Wenn das Sparziel erreicht und in der WebApp abgeschlossen wurde, öffnet der Servo das Sparkässeli wieder.
+ 
   * *die Kommunikationswege* 
 ```mermaid
 flowchart TD
@@ -169,6 +234,18 @@ flowchart TD
     AA --> AB
     AB --> A
 ```
+
+Das Flussdiagramm zeigt den Ablauf des Physical-Computing-Teils vom Sparkässeli. Es ist in die Bereiche **WebApp**, **PHP-API**, **Datenbank** und **Physical Computing / ESP32-C6** aufgeteilt. Dadurch sieht man, welche Aufgaben direkt am Sparkässeli passieren und welche Aufgaben über die WebApp und die Datenbank laufen.
+
+Der Ablauf beginnt in der WebApp. Dort wird ein neues Sparziel erstellt. Dieses Sparziel wird über `api/sparziel_erstellen.php` an die Datenbank gesendet und dort gespeichert. Danach fragt der ESP32-C6 das aktive Sparziel und den aktuellen Münzbestand über die API ab. Sobald ein neues Sparziel aktiv ist, schliesst der Servo das Sparkässeli und der ESP32 wartet auf einen Münzeinwurf.
+
+Wenn eine Münze eingeworfen wird, erkennt die Lichtschranke den Einwurf. Das Signal wird an den ESP32-C6 weitergegeben. Der ESP32 verarbeitet das Sensorsignal und sendet den Einwurf über WLAN und HTTP an `api/einwurf.php`. Dort wird der Einwurf in der Datenbank gespeichert.
+
+Anschliessend wird über `api/muenzbestand.php` der aktuelle Münzbestand aus der Datenbank abgefragt. Der ESP32 erhält diesen Wert und zeigt ihn auf dem OLED-Display an. Das OLED-Display ist also nicht direkt mit der Datenbank verbunden, sondern wird vom ESP32 angesteuert. Gleichzeitig zeigt der NeoPixel-LED-Ring den Sparfortschritt an und die Status-LEDs geben zusätzliches Feedback.
+
+Über `api/sparziel.php` wird geprüft, ob das Sparziel erreicht wurde. Wenn das Ziel noch nicht erreicht ist, wartet der ESP32 weiter auf den nächsten Münzeinwurf. Wenn das Ziel erreicht wurde, zeigen OLED-Display und LEDs den erreichten Zustand an. Auch die WebApp zeigt an, dass das Ziel erreicht wurde.
+
+Das Abschliessen des Sparziels passiert in der WebApp. Wenn der Nutzer auf **Abschliessen** klickt, wird `api/sparziel_abschliessen.php` aufgerufen. Die Datenbank markiert das Sparziel danach als abgeschlossen. Der ESP32 fragt diesen Status wieder über die API ab. Sobald der abgeschlossene Status erkannt wird, öffnet der Servo das Sparkässeli. Danach wartet das System auf ein neues Sparziel und der Ablauf beginnt von vorne.
 
 
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
