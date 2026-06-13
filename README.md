@@ -257,13 +257,13 @@ Das Abschliessen des Sparziels passiert in der WebApp. Wenn der Nutzer auf **Abs
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
   Hier ist der komplette Abschnitt **Steckplan** mit der kompakten Pin-Tabelle:
 
+Ja, so muss es in der README stehen. Wichtig: Der Bild-Link ist **nicht** in einem Codeblock.
+
 ##### Steckplan
 
 Der Steckplan wurde als Bild erstellt und als PNG in das Repository eingefügt. Er zeigt den vollständigen Aufbau des Physical-Computing-Teils mit dem ESP32-C6, den Sensoren, den Aktoren und der Stromversorgung.
 
-```markdown
 ![Steckplan Physical Computing](assets/steckplan.png)
-```
 
 Im Zentrum des Steckplans befindet sich der ESP32-C6 auf dem Breadboard. Er ist die zentrale Steuerung des Sparkässelis. Links sind drei Lichtschranken beziehungsweise Sensor-Module angeschlossen. Diese erkennen, wenn eine Münze eingeworfen wird, und senden das Signal an den ESP32-C6.
 
