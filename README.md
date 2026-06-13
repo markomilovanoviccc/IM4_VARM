@@ -255,9 +255,7 @@ Das Abschliessen des Sparziels passiert in der WebApp. Wenn der Nutzer auf **Abs
 
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
-  Hier ist der komplette Abschnitt **Steckplan** mit der kompakten Pin-Tabelle:
 
-Ja, so muss es in der README stehen. Wichtig: Der Bild-Link ist **nicht** in einem Codeblock.
 
 ##### Steckplan
 
