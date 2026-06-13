@@ -261,7 +261,7 @@ Das Abschliessen des Sparziels passiert in der WebApp. Wenn der Nutzer auf **Abs
 
 Der Steckplan wurde als Bild erstellt und als PNG in das Repository eingefügt. Er zeigt den vollständigen Aufbau des Physical-Computing-Teils mit dem ESP32-C6, den Sensoren, den Aktoren und der Stromversorgung.
 
-![Steckplan Physical Computing](assets/steckplan.png)
+![Steckplan Physical Computing](resources/assets/steckplan.png)
 
 Im Zentrum des Steckplans befindet sich der ESP32-C6 auf dem Breadboard. Er ist die zentrale Steuerung des Sparkässelis. Links sind drei Lichtschranken beziehungsweise Sensor-Module angeschlossen. Diese erkennen, wenn eine Münze eingeworfen wird, und senden das Signal an den ESP32-C6.
 
