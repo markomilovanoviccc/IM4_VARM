@@ -80,7 +80,62 @@ ardware-Code: Trage im Skript deines Mikrocontrollers deine WLAN-Daten, eine ein
   * *die eingesetzten Komponenten*  
   * *die verbundenen Sensoren und Aktoren*  
   * *die Programme (mit Dateinamen)*  
-  * *die Kommunikationswege*  
+  * *die Kommunikationswege* 
+  ```mermaid
+flowchart TD
+    A([Münze wird eingeworfen]) --> B[Lichtschranke erkennt Münze]
+    B --> C{Münze erkannt?}
+
+    C -->|Nein| D[ESP32-C6 wartet weiter]
+    D --> B
+
+    C -->|Ja| E[ESP32-C6 verarbeitet Einwurf]
+
+    E --> F[Servo bewegt sich]
+    E --> G[NeoPixel-LED-Ring wird aktualisiert]
+    E --> H[Status-LEDs geben Feedback]
+
+    E --> I[ESP32-C6 sendet Einwurf über WLAN / HTTP]
+    I --> J[api/einwurf.php]
+    J --> K[(Datenbank)]
+
+    K --> L[api/muenzbestand.php]
+    L --> M[ESP32-C6 fragt aktuellen Münzbestand ab]
+    M --> N[OLED-Display zeigt aktuellen Betrag an]
+
+    K --> O[api/stats.php]
+    O --> P[js/sparschwein.js]
+    P --> Q[protected.html zeigt Sparstand und Statistik]
+
+    R[index.html] --> S[js/auth.js]
+    S --> T[api/protected.php]
+
+    U[login.html] --> V[js/login.js]
+    V --> W[api/login.php]
+    W --> K
+
+    X[js/logout.js] --> Y[api/logout.php]
+
+    Z[js/register.js] --> AA[api/register.php]
+    AA --> K
+
+    AB[api/sparziel.php] --> K
+    AC[api/sparziel_erstellen.php] --> K
+    AD[api/sparziel_abschliessen.php] --> K
+
+    AE[C++ Code auf ESP32-C6] --> E
+    AF[system/config.php.blank] --> J
+    AF --> L
+    AF --> O
+    AF --> T
+    AF --> W
+    AF --> Y
+    AF --> AA
+    AF --> AB
+    AF --> AC
+    AF --> AD
+```
+
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
 * *ggf. **Bildmaterial***
