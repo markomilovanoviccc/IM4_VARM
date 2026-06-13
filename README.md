@@ -78,6 +78,11 @@ ardware-Code: Trage im Skript deines Mikrocontrollers deine WLAN-Daten, eine ein
 * ***Was muss ich wie bauen, verbinden, installieren?***  
 * *ergänze: **Komponentenplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): Schaubild enthält*  
   * *die eingesetzten Komponenten*  
+  ##### Eingesetzte Komponenten
+
+Für den Aufbau wurden ein ESP32-C6, zwei Breadboards, drei Lichtschranken, ein OLED-Display, ein NeoPixel-LED-Ring, ein Servo, drei Status-LEDs mit Widerständen, ein Schalter, Jumper-Kabel und eine externe Stromversorgung über USB-C beziehungsweise Powerbank verwendet.
+
+Die wichtigsten aktiven Bauteile werden im nächsten Abschnitt bei den verbundenen Sensoren und Aktoren genauer erklärt.
   * *die verbundenen Sensoren und Aktoren*  
   ##### Verbundene Sensoren und Aktoren
 
@@ -250,6 +255,47 @@ Das Abschliessen des Sparziels passiert in der WebApp. Wenn der Nutzer auf **Abs
 
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
+  Hier ist der komplette Abschnitt **Steckplan** mit der kompakten Pin-Tabelle:
+
+##### Steckplan
+
+Der Steckplan wurde als Bild erstellt und als PNG in das Repository eingefügt. Er zeigt den vollständigen Aufbau des Physical-Computing-Teils mit dem ESP32-C6, den Sensoren, den Aktoren und der Stromversorgung.
+
+```markdown
+![Steckplan Physical Computing](assets/steckplan.png)
+```
+
+Im Zentrum des Steckplans befindet sich der ESP32-C6 auf dem Breadboard. Er ist die zentrale Steuerung des Sparkässelis. Links sind drei Lichtschranken beziehungsweise Sensor-Module angeschlossen. Diese erkennen, wenn eine Münze eingeworfen wird, und senden das Signal an den ESP32-C6.
+
+Oben ist der Servo angeschlossen. Dieser wird vom ESP32-C6 gesteuert und öffnet oder schliesst das Sparkässeli. Rechts befinden sich das OLED-Display und der NeoPixel-LED-Ring. Das OLED-Display zeigt den aktuellen Betrag und Statusmeldungen an. Der LED-Ring zeigt den Fortschritt des Sparziels visuell an.
+
+Zusätzlich sind drei einzelne Status-LEDs mit Widerständen eingebaut. Sie geben zusätzliches Feedback zum Zustand des Sparkässelis. Unten befindet sich ein Schalter, der für eine Funktion am ESP32 verwendet wird, zum Beispiel für das Zurücksetzen der WLAN-Verbindung. Die Stromversorgung erfolgt über USB-C beziehungsweise eine Powerbank.
+
+Die Farben im Steckplan dienen zur Orientierung:
+
+| Farbe                | Bedeutung       |
+| -------------------- | --------------- |
+| Rot                  | Stromversorgung |
+| Blau                 | GND             |
+| Orange / Gelb / Grau | Signalleitungen |
+
+Die genaue Verdrahtung ist in der folgenden Pin-Tabelle zusammengefasst:
+
+| Bauteil           | Anschluss 1                                             | Anschluss 2                       | Anschluss 3                |
+| ----------------- | ------------------------------------------------------- | --------------------------------- | -------------------------- |
+| Lichtschranke 1   | VCC → 3V3                                               | GND → GND                         | DO / Signal → GPIO 2       |
+| Lichtschranke 2   | VCC → 3V3                                               | GND → GND                         | DO / Signal → GPIO 8       |
+| Lichtschranke 3   | VCC → 3V3                                               | GND → GND                         | DO / Signal → GPIO 20      |
+| Servo             | VCC → 5V                                                | GND → GND                         | Signal → GPIO 3            |
+| OLED-Display      | VCC → 3V3                                               | GND → GND                         | SDA → GPIO 6, SCL → GPIO 7 |
+| NeoPixel-LED-Ring | 5V → 5V                                                 | GND → GND                         | DIN → GPIO 4               |
+| Schalter          | eine Seite → GND                                        | andere Seite → GPIO 22            |                            |
+| Status-LEDs       | Pluspol → GPIO-Pins gemäss `computing/sparkaesseli.ino` | Minuspol → über Widerstand zu GND |                            |
+
+Alle Sensoren und Aktoren sind über das Breadboard mit dem ESP32-C6 verbunden. Wichtig ist, dass alle GND-Leitungen miteinander verbunden sind. Dadurch haben ESP32, Sensoren, Display, LED-Ring, Servo und externe Stromversorgung denselben Massepunkt und die Signale können zuverlässig gelesen werden.
+
+Die genaue Pinbelegung ist zusätzlich im Code `computing/sparkaesseli.ino` definiert. Falls ein Kabel im Steckplan angepasst wird, muss der entsprechende GPIO-Pin auch im Code angepasst werden.
+
 * *ggf. **Bildmaterial***
 
 ## technische Details
