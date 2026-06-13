@@ -83,9 +83,10 @@ ardware-Code: Trage im Skript deines Mikrocontrollers deine WLAN-Daten, eine ein
   * *die Kommunikationswege* 
 ```mermaid
 flowchart TD
-    A([Neues Sparziel wird eingegeben]) --> B[api/sparziel_erstellen.php]
+    A([Neues Sparziel wird in der WebApp erstellt]) --> B[api/sparziel_erstellen.php]
     B --> C[(Datenbank speichert neues Sparziel)]
-    C --> D[ESP32-C6 fragt aktives Sparziel ab]
+
+    C --> D[ESP32-C6 fragt Sparziel und Münzbestand über API ab]
     D --> E[Servo schliesst Sparkässeli]
     E --> F[ESP32-C6 wartet auf Münzeinwurf]
 
@@ -95,16 +96,15 @@ flowchart TD
 
     I -->|Nein| F
 
-    I -->|Ja| J[ESP32-C6 verarbeitet Einwurf]
-
+    I -->|Ja| J[ESP32-C6 verarbeitet Sensorsignal]
     J --> K[ESP32-C6 sendet Einwurf über WLAN / HTTP]
     K --> L[api/einwurf.php]
     L --> M[(Datenbank speichert Einwurf)]
 
     M --> N[api/muenzbestand.php]
-    N --> O[ESP32-C6 fragt aktuellen Münzbestand ab]
-    O --> P[OLED-Display zeigt aktuellen Betrag an]
+    N --> O[ESP32-C6 erhält aktuellen Münzbestand aus der Datenbank]
 
+    O --> P[OLED-Display zeigt aktuellen Betrag an]
     O --> Q[NeoPixel-LED-Ring zeigt Sparfortschritt]
     O --> R[Status-LEDs geben Feedback]
 
@@ -113,26 +113,33 @@ flowchart TD
 
     T -->|Nein| F
 
-    T -->|Ja| U[Ziel erreicht wird angezeigt]
-    U --> V[api/sparziel_abschliessen.php]
-    V --> W[(Datenbank schliesst Sparziel ab)]
-    W --> X[ESP32-C6 erhält Freigabe]
-    X --> Y[Servo öffnet Sparkässeli]
+    T -->|Ja| U[OLED / LEDs zeigen Ziel erreicht an]
+    U --> V[WebApp zeigt Ziel erreicht an]
 
-    Y --> Z[Warten auf neues Sparziel]
-    Z --> A
+    V --> W{Nutzer klickt Abschliessen in der WebApp}
+    W --> X[api/sparziel_abschliessen.php]
+    X --> Y[(Datenbank markiert Sparziel als abgeschlossen)]
 
-    AA[C++ Code auf ESP32-C6] --> D
-    AA --> E
-    AA --> J
-    AA --> O
-    AA --> Y
+    Y --> Z[ESP32-C6 fragt Status über API ab]
+    Z --> AA[Servo öffnet Sparkässeli]
 
-    AB[api/sparziel_erstellen.php] --> C
-    AC[api/einwurf.php] --> M
-    AD[api/muenzbestand.php] --> O
-    AE[api/sparziel.php] --> T
-    AF[api/sparziel_abschliessen.php] --> W
+    AA --> AB[Warten auf neues Sparziel]
+    AB --> A
+
+    AC[C++ Code auf ESP32-C6] --> D
+    AC --> J
+    AC --> K
+    AC --> O
+    AC --> P
+    AC --> Q
+    AC --> R
+    AC --> AA
+
+    AD[PHP-API] --> B
+    AD --> L
+    AD --> N
+    AD --> S
+    AD --> X
 ```
 * *ergänze: **Steckplan** (betrifft Physical Computing, vgl. Slides Kapitel 15): generiert z.B. mit Fritzing (empfohlen), Tinkercad, Wokwi*  
   * *beachtet die [Fritzing Parts](https://github.com/Interaktive-Medien/im_physical_computing/tree/main/15_Intro_Projektdoku) extra für euch*  
