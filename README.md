@@ -301,15 +301,285 @@ Die genaue Pinbelegung ist zusätzlich im Code `computing/sparkaesseli.ino` defi
 // Hier sollte das Verständnis ersichtlich sein / Wie stehen die Dateien in Beziehung zueinander, Wie reden Die Dateien miteinander, Wie ist der Weg der Daten
 
 * **Projektstruktur / Code-Struktur:** \[*Hinweis: Der Code selbst muss im Repository liegen und im Kopfbereich jeder Datei eine kurze Zusammenfassung enthalten.*\]  
+### Projektstruktur / Code-Struktur
+
+Das Projekt ist in mehrere Bereiche aufgeteilt. Dadurch ist klar getrennt, welche Dateien für das Physical Computing, welche für die WebApp, welche für die API und welche für die Datenbank zuständig sind.
+
+```text
+IM4/
+├── api/
+│   ├── einwurf.php
+│   ├── login.php
+│   ├── logout.php
+│   ├── muenzbestand.php
+│   ├── protected.php
+│   ├── register.php
+│   ├── sparziel.php
+│   ├── sparziel_erstellen.php
+│   ├── sparziel_abschliessen.php
+│   └── stats.php
+│
+├── computing/
+│   └── sparkaesseli.ino
+│
+├── css/
+│   └── style.css
+│
+├── js/
+│   ├── auth.js
+│   ├── login.js
+│   ├── logout.js
+│   ├── protected.js
+│   ├── register.js
+│   └── sparschwein.js
+│
+├── system/
+│   ├── config.php
+│   ├── config.php.blank
+│   └── db.sql
+│
+├── assets/
+│   └── steckplan.png
+│
+├── index.html
+├── login.html
+├── register.html
+├── protected.html
+└── README.md
+```
+
+Der Physical-Computing-Code befindet sich in `computing/sparkaesseli.ino`. Diese Datei läuft auf dem ESP32-C6. Sie liest die Lichtschranken aus, steuert das OLED-Display, den NeoPixel-LED-Ring, die Status-LEDs und den Servo. Zusätzlich verbindet sich der ESP32-C6 über WLAN mit der WebApp und sendet oder empfängt Daten über HTTP.
+
+Die Dateien im Ordner `api/` bilden die Schnittstelle zwischen ESP32-C6, WebApp und Datenbank. Der ESP32 greift nicht direkt auf die Datenbank zu, sondern kommuniziert mit PHP-Dateien wie `api/einwurf.php`, `api/sparziel.php` und `api/muenzbestand.php`. Diese Dateien lesen Daten aus der Datenbank oder speichern neue Daten ab.
+
+Die HTML-Dateien bilden die sichtbaren Seiten der WebApp. `index.html` ist die Startseite, `login.html` und `register.html` sind für Anmeldung und Registrierung zuständig. Die geschützte Hauptansicht befindet sich in `protected.html`.
+
+Die JavaScript-Dateien im Ordner `js/` verbinden die WebApp mit der API. Sie senden Benutzereingaben an PHP-Dateien und aktualisieren die Anzeige im Browser. Für das Sparkässeli ist besonders `js/sparschwein.js` wichtig, weil dort Daten wie Sparziel, Münzbestand und Fortschritt verarbeitet werden.
+
+Im Ordner `system/` befinden sich die Dateien für die Datenbank. `config.php` enthält die Zugangsdaten zur Datenbank und wird von den PHP-Dateien verwendet. `config.php.blank` dient als Vorlage, damit keine echten Zugangsdaten öffentlich im Repository stehen müssen. In `db.sql` ist die Datenbankstruktur dokumentiert.
+
+Der Code selbst liegt vollständig im Repository. Zusätzlich sollte jede wichtige Code-Datei im Kopfbereich einen kurzen Kommentar enthalten, der erklärt, was die Datei macht. Dadurch ist schneller verständlich, wofür eine Datei zuständig ist.
+
+Beispiel für `computing/sparkaesseli.ino`:
+
+```cpp
+/*
+  Sparkässeli Physical Computing
+
+  Dieser Code läuft auf dem ESP32-C6. Er liest die Lichtschranken aus,
+  steuert OLED-Display, NeoPixel-LED-Ring, Status-LEDs und Servo.
+  Zusätzlich kommuniziert der ESP32 über WLAN mit der PHP-API.
+*/
+```
+
+Beispiel für eine PHP-Datei:
+
+```php
+<?php
+/*
+  API: Münzeinwurf speichern
+
+  Diese Datei nimmt Münzeinwürfe vom ESP32-C6 entgegen
+  und speichert sie in der Datenbank.
+*/
+```
+
+Beispiel für eine JavaScript-Datei:
+
+```js
+/*
+  WebApp: Sparkässeli-Anzeige
+
+  Diese Datei lädt Sparziel, Münzbestand und Fortschritt über die API
+  und aktualisiert die Anzeige in der WebApp.
+*/
+```
+
 * **Datenschnittstelle: \[***zwischen WebApp und Physical Computing*\]  
+Ja. Für die **Datenschnittstelle** ist wichtig: Der ESP32 redet **nicht direkt mit der Datenbank**, sondern über HTTP mit den PHP-Dateien. Aus deinem ESP32-Code sieht man, dass der ESP32 vor allem `api/einwurf.php` und `api/sparziel.php?geraete_id=SPAR001` nutzt. 
+
+### Datenschnittstelle zwischen WebApp und Physical Computing
+
+Die Datenschnittstelle zwischen WebApp und Physical Computing läuft über WLAN, HTTP und JSON. Der ESP32-C6 ist nicht direkt mit der Datenbank verbunden. Er kommuniziert mit PHP-Dateien im Ordner `api/`. Diese PHP-Dateien lesen Daten aus der Datenbank oder speichern neue Daten ab.
+
+Im Code `computing/sparkaesseli.ino` ist die Geräte-ID des Sparkässelis definiert:
+
+```cpp
+String geraeteId = "SPAR001";
+```
+
+Diese `geraete_id` ist wichtig, damit die API weiss, zu welchem Sparkässeli die Daten gehören. Der ESP32 sendet bei einem Münzeinwurf nicht einfach nur den Münzwert, sondern auch diese Geräte-ID.
+
+#### Münzeinwurf vom ESP32 zur WebApp
+
+Wenn eine Münze eingeworfen wird, erkennt eine Lichtschranke den Einwurf. Im ESP32-Code wird je nach Sensor ein Münzwert erkannt. Danach sendet der ESP32 eine HTTP-POST-Anfrage an:
+
+```text
+api/einwurf.php
+```
+
+Dabei wird ein JSON-Objekt gesendet:
+
+```json
+{
+  "geraete_id": "SPAR001",
+  "muenz_wert": 1.00
+}
+```
+
+Die Datei `api/einwurf.php` nimmt diese Daten entgegen. Zuerst wird geprüft, ob die übergebene `geraete_id` zu einem vorhandenen Sparkässeli in der Tabelle `sparschwein` gehört. Danach wird der Einwurf in der Tabelle `einwurf_historie` gespeichert. Zusätzlich wird der aktuelle Münzbestand in der Tabelle `muenzbestand` aktualisiert. Wenn der Münzwert schon vorhanden ist, wird die Anzahl erhöht. Wenn der Münzwert noch nicht vorhanden ist, wird ein neuer Eintrag erstellt.
+
+Der Datenweg beim Münzeinwurf sieht so aus:
+
+```text
+Münze wird eingeworfen
+→ Lichtschranke erkennt Münze
+→ ESP32-C6 verarbeitet das Sensorsignal
+→ ESP32-C6 sendet JSON an api/einwurf.php
+→ api/einwurf.php speichert den Einwurf in der Datenbank
+→ muenzbestand wird aktualisiert
+```
+
+#### Aktueller Stand und Sparziel zurück zum ESP32
+
+Nach einem erfolgreichen Münzeinwurf lädt der ESP32 das aktuelle Sparziel neu. Zusätzlich fragt der ESP32 im normalen Betrieb alle 10 Sekunden den aktuellen Stand ab. Dafür wird folgende API-Datei verwendet:
+
+```text
+api/sparziel.php?geraete_id=SPAR001
+```
+
+Diese Datei sucht zuerst das passende Sparkässeli über die `geraete_id`. Danach wird das aktive Sparziel aus der Tabelle `sparziel` geladen. Zusätzlich wird aus der Tabelle `muenzbestand` der aktuelle Gesamtbetrag berechnet.
+
+Die Antwort kommt als JSON zurück. Ein Beispiel:
+
+```json
+{
+  "status": "success",
+  "geraete_id": "SPAR001",
+  "sparschwein": "Mein Sparkässeli",
+  "titel": "Neues Fahrrad",
+  "ziel_betrag": 150.00,
+  "aktueller_betrag": 45.00,
+  "fortschritt": 30.0,
+  "ist_erreicht": false
+}
+```
+
+Der ESP32 liest daraus den Titel, den Zielbetrag, den aktuellen Betrag und den Fortschritt. Danach zeigt er diese Werte auf dem OLED-Display an. Der NeoPixel-LED-Ring zeigt zusätzlich den Fortschritt zum Sparziel.
+
+Wichtig ist: Das OLED-Display liest nicht selbst aus der Datenbank. Das Display ist direkt mit dem ESP32 verbunden. Der ESP32 holt die Daten über die API und gibt sie danach auf dem Display aus.
+
+#### Neues Sparziel und Abschliessen über die WebApp
+
+Ein neues Sparziel wird in der WebApp eingegeben. Die WebApp sendet diese Daten an:
+
+```text
+api/sparziel_erstellen.php
+```
+
+Diese Datei sucht über die `geraete_id` das richtige Sparkässeli, deaktiviert alte Sparziele und speichert das neue Sparziel in der Tabelle `sparziel`. Sobald der ESP32 beim nächsten Abfragen ein neues aktives Sparziel erkennt, schliesst er das Sparkässeli mit dem Servo.
+
+Wenn das Ziel erreicht ist, wird dies auf dem ESP32 und in der WebApp angezeigt. Das eigentliche Abschliessen passiert in der WebApp durch den Button **Abschliessen**. Dabei wird folgende Datei aufgerufen:
+
+```text
+api/sparziel_abschliessen.php
+```
+
+Diese Datei markiert das Sparziel als abgeschlossen und setzt den Münzbestand zurück. Wenn der ESP32 danach wieder `api/sparziel.php` abfragt und kein aktives Sparziel mehr vorhanden ist, erkennt er diesen Zustand. Danach öffnet der Servo das Sparkässeli.
+
+#### Übersicht der Schnittstellen
+
+| Richtung        | Datei                                 | Methode | Aufgabe                                                                |
+| --------------- | ------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| ESP32 → API     | `api/einwurf.php`                     | POST    | Speichert einen Münzeinwurf in der Datenbank.                          |
+| API → ESP32     | `api/sparziel.php?geraete_id=SPAR001` | GET     | Gibt aktives Sparziel, aktuellen Betrag und Fortschritt zurück.        |
+| WebApp → API    | `api/sparziel_erstellen.php`          | POST    | Speichert ein neues Sparziel.                                          |
+| WebApp → API    | `api/sparziel_abschliessen.php`       | POST    | Schliesst ein erreichtes Sparziel ab und setzt den Münzbestand zurück. |
+| WebApp → API    | `api/stats.php`                       | GET     | Lädt Daten für die Statistik in der WebApp.                            |
+| API → Datenbank | `system/config.php`                   | PDO     | Stellt die Verbindung zur Datenbank her.                               |
+
+#### Vereinfachter Datenfluss
+
+```mermaid
+sequenceDiagram
+    participant ESP as ESP32-C6
+    participant API as PHP-API
+    participant DB as Datenbank
+    participant WEB as WebApp
+
+    WEB->>API: Neues Sparziel speichern
+    API->>DB: Sparziel in sparziel speichern
+
+    ESP->>API: GET api/sparziel.php?geraete_id=SPAR001
+    API->>DB: Sparziel und Münzbestand abfragen
+    DB-->>API: Aktueller Betrag und Fortschritt
+    API-->>ESP: JSON mit Sparziel und aktuellem Betrag
+
+    ESP->>ESP: OLED und LED-Ring aktualisieren
+
+    ESP->>API: POST api/einwurf.php mit geraete_id und muenz_wert
+    API->>DB: Einwurf speichern und muenzbestand aktualisieren
+    API-->>ESP: Erfolgsmeldung
+
+    WEB->>API: Sparziel abschliessen
+    API->>DB: Sparziel abschliessen und Münzbestand zurücksetzen
+
+    ESP->>API: GET api/sparziel.php?geraete_id=SPAR001
+    API-->>ESP: Kein aktives Sparziel
+    ESP->>ESP: Servo öffnet Sparkässeli
+```
+
+Diese Schnittstelle verbindet den physischen Münzeinwurf mit der WebApp. Der ESP32 übernimmt die Hardwaresteuerung und zeigt die Daten am Sparkässeli an. Die PHP-API vermittelt zwischen ESP32, WebApp und Datenbank.
+
 * **ERM:** \[*Erklärung und Schaubild*\]  
+### ERM
+
+Das ERM zeigt die Struktur der Datenbank. In der aktuellen Datei `system/db.sql` ist die Tabelle `users` definiert. Diese Tabelle wird für die Registrierung und den Login der WebApp verwendet.
+
+```mermaid
+erDiagram
+    USERS {
+        int id PK
+        string first_name
+        string email UK
+        string password
+    }
+```
+
+Die Tabelle `users` speichert die Benutzerdaten der WebApp. Jeder Nutzer erhält eine eindeutige `id`. Zusätzlich werden der Vorname, die E-Mail-Adresse und das Passwort gespeichert. Die E-Mail-Adresse ist eindeutig, damit sich nicht mehrere Nutzer mit derselben E-Mail-Adresse registrieren können.
+
+In den PHP-Dateien werden zusätzlich weitere Tabellen verwendet, zum Beispiel `sparschwein`, `sparziel`, `muenzbestand` und `einwurf_historie`. Diese Tabellen sind für den Physical-Computing-Teil wichtig, weil dort Sparziele, Münzbestand und Münzeinwürfe gespeichert werden. In der aktuellen `system/db.sql` sind diese Tabellen jedoch noch nicht dokumentiert. Für eine vollständige Dokumentation müssten diese Tabellen noch in die SQL-Datei ergänzt werden.
+
 * **Authentifizierung:** \[*Erklärung*\]
+### Authentifizierung
+
+Die Authentifizierung wird in der WebApp über Registrierung, Login und PHP-Sessions gelöst. Bei der Registrierung speichert `api/register.php` den Nutzer in der Tabelle `users`. Das Passwort wird dabei mit `password_hash()` verschlüsselt gespeichert.
+
+Beim Login prüft `api/login.php` die E-Mail-Adresse und das Passwort mit `password_verify()`. Wenn die Daten stimmen, wird eine Session erstellt. In dieser Session werden unter anderem `user_id`, `email` und `first_name` gespeichert. Geschützte Bereiche werden danach über `api/protected.php` geprüft. Wenn keine gültige Session vorhanden ist, wird der Zugriff verweigert. Beim Logout löscht `api/logout.php` die Session wieder.
+
+Der ESP32-C6 verwendet keinen normalen Login. Er wird über die `geraete_id` zugeordnet, zum Beispiel `SPAR001`. Diese ID wird bei API-Anfragen mitgeschickt, damit die Daten dem richtigen Sparkässeli zugeordnet werden können. Für eine spätere Version wäre ein zusätzlicher API-Key sinnvoll, damit die Schnittstelle besser geschützt ist.
+
 
 ## Known bugs
 
 * Was funktioniert noch nicht einwandfrei?  
 * Was ist uns aufgefallen bei der Entwicklung?  
 * Was könnte noch verbessert werden?
+
+## Known bugs
+
+Beim Physical-Computing-Teil funktioniert die Münzerkennung noch nicht immer ganz zuverlässig. Die Münzen werden nicht in jedem Fall sauber gezählt. Vermutlich liegt das Problem nicht nur am Code, sondern auch am physischen Aufbau. Der 3D-Druck beziehungsweise die Münzführung ist wahrscheinlich noch nicht ganz genau genug. Wenn die Abstände bei den Lichtschranken zu gross sind oder die Münzen nicht immer gleich durch den Kanal fallen, können Einwürfe falsch oder gar nicht erkannt werden.
+
+Ein weiterer Punkt ist, dass die Sensoren sehr stark vom genauen Aufbau abhängig sind. Schon kleine Verschiebungen bei der Position der Lichtschranken können beeinflussen, ob eine Münze korrekt erkannt wird. Für eine nächste Version müsste die Münzführung deshalb genauer angepasst und mit verschiedenen Münzen mehrmals getestet werden.
+
+Verbessert werden könnten vor allem diese Punkte:
+
+* Münzführung im 3D-Druck genauer anpassen
+* Abstände der Lichtschranken besser testen
+* Sensorpositionen stabiler befestigen
+* Erkennung mit verschiedenen Münzen mehrfach kalibrieren
+* eventuell den Münzkanal so überarbeiten, dass die Münzen immer gleich an den Lichtschranken vorbeifallen
+
 
 ## Umsetzungsprozess
 
