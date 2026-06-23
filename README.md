@@ -35,7 +35,7 @@ Das Sparschwein wäre viel zu gross geworden und hätte zu viele Sensoren gebrau
 ### Setup
 
 * **WebApp:** [Link zur Website]( https://im4-varm.villelindskog.ch/login.html)  
-* **Video-Dokumentation:** [Link zum Video auf Youtube](http://link.zum.video) 
+* **Video-Dokumentation:** [Link zum Video auf Youtube](https://www.youtube.com/watch?v=akK8FsAwPm0) 
 
 #### Installationsanleitung WebApp
 
